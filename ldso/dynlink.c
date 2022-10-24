@@ -1632,8 +1632,13 @@ static void install_new_tls(void)
 }
 
 struct fake_dso {
-        unsigned char *base;
+    unsigned char *base;
+    char *name;
     size_t *dynv;
+    struct dso *next;
+    struct dso *prev;
+    void *empty;
+
     unsigned char *map;
     size_t map_len;
     size_t relro_start, relro_end;
@@ -1664,6 +1669,9 @@ struct musl_loader {
     struct auxv_entry auxv[AUX_CNT];
 
     size_t last_aux_entry;
+
+    void (*debug_state)();
+    void *debug;
 };
 
 
@@ -1673,6 +1681,18 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
         static struct dso app;
         size_t aux[AUX_CNT];
         size_t dyn[DYN_CNT];
+        
+#if 0
+
+        if (ml->debug && ml->debug_state) {
+            struct debug *d = (struct debug *) ml->debug;
+            //d->state = RT_ADD;
+            (*ml->debug_state)();
+        } else {
+            _dl_debug_state();
+        }
+#endif
+
 
         decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
 
@@ -1706,6 +1726,8 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
 	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
 		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
 
+        __environ = calloc(1, sizeof(char *));
+
         runtime = 1;
         app.base = ml->library_dso.base;
 
@@ -1730,6 +1752,7 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
         //        add_syms(p);
 
 
+#if 0
 	for (int i=0; app.dynv[i]; i+=2) {
 		if (!DT_DEBUG_INDIRECT && app.dynv[i]==DT_DEBUG)
 			app.dynv[i+1] = (size_t)&debug;
@@ -1738,12 +1761,20 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
 			*ptr = (size_t)&debug;
 		}
         }
-        debug.ver = 1;
-        debug.bp = dl_debug_state;
-        debug.head = head;
-        debug.base = ldso.base;
-        debug.state = RT_CONSISTENT;
-        _dl_debug_state();
+
+        if (ml->debug && ml->debug_state) {
+            struct debug *d = (struct debug *) ml->debug;
+            //d->state = RT_CONSISTENT;
+            (*ml->debug_state)();
+        } else {
+            debug.ver = 1;
+            debug.bp = dl_debug_state;
+            debug.head = head;
+            debug.base = ldso.base;
+            debug.state = RT_CONSISTENT;
+            _dl_debug_state();
+        }
+#endif
 
         graal_syscall_handler_set(handler, ctx);
         
