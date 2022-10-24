@@ -23,6 +23,7 @@
 #include "fork_impl.h"
 #include "libc.h"
 #include "dynlink.h"
+#include "../src/graalos/graal_syscall.h"
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -1031,7 +1032,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			is_self = 1;
 		}
 	}
-	if (!strcmp(name, ldso.name)) is_self = 1;
+	if (ldso.name && !strcmp(name, ldso.name)) is_self = 1;
 	if (is_self) {
 		if (!ldso.prev) {
 			tail->next = &ldso;
@@ -1105,17 +1106,19 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		close(fd);
 		return 0;
 	}
-	for (p=head->next; p; p=p->next) {
-		if (p->dev == st.st_dev && p->ino == st.st_ino) {
-			/* If this library was previously loaded with a
-			 * pathname but a search found the same inode,
-			 * setup its shortname so it can be found by name. */
-			if (!p->shortname && pathname != name)
-				p->shortname = strrchr(p->name, '/')+1;
-			close(fd);
-			return p;
-		}
-	}
+        if (head) {
+            for (p=head->next; p; p=p->next) {
+                    if (p->dev == st.st_dev && p->ino == st.st_ino) {
+                            /* If this library was previously loaded with a
+                             * pathname but a search found the same inode,
+                             * setup its shortname so it can be found by name. */
+                            if (!p->shortname && pathname != name)
+                                    p->shortname = strrchr(p->name, '/')+1;
+                            close(fd);
+                            return p;
+                    }
+            }
+        }
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) return 0;
@@ -1627,6 +1630,127 @@ static void install_new_tls(void)
 	__tl_unlock();
 	__restore_sigs(&set);
 }
+
+struct fake_dso {
+        unsigned char *base;
+    size_t *dynv;
+    unsigned char *map;
+    size_t map_len;
+    size_t relro_start, relro_end;
+    Elf64_Phdr *phdr;
+    int phnum;
+    size_t phentsize;
+    Elf64_Sym *syms;
+    uint32_t *ghashtab;
+    int16_t *versym;
+    char *strings;
+    size_t *got;
+
+};
+
+struct auxv_entry {
+    size_t key;
+    size_t value;
+};
+
+
+struct musl_loader {
+    int loader_fd;
+    int library_fd;
+
+    struct fake_dso loader_dso;
+    struct fake_dso library_dso;
+
+    struct auxv_entry auxv[AUX_CNT];
+
+    size_t last_aux_entry;
+};
+
+
+
+void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx) 
+{
+        static struct dso app;
+        size_t aux[AUX_CNT];
+        size_t dyn[DYN_CNT];
+
+        decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
+
+        //ldso.base = (void *)aux[AT_BASE];
+        ldso.base = ml->loader_dso.base;
+
+	Ehdr *ehdr = (void *)ldso.base;
+	ldso.name = ldso.shortname = "libc.so";
+	ldso.phnum = ehdr->e_phnum;
+	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
+	ldso.phentsize = ehdr->e_phentsize;
+	kernel_mapped_dso(&ldso);
+        
+	decode_dyn(&ldso);
+
+	head = &ldso;
+	reloc_all(&ldso);
+
+	ldso.relocated = 0;
+        
+	libc.auxv = (size_t *)ml->auxv;
+	libc.tls_size = sizeof builtin_tls;
+	libc.tls_align = tls_align;
+	if (__init_tp(__copy_tls((void *)builtin_tls)) < 0) {
+		a_crash();
+	}
+
+	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
+	__pthread_self()->sysinfo = __sysinfo;
+	libc.page_size = aux[AT_PAGESZ];
+	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
+		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
+
+        runtime = 1;
+        app.base = ml->library_dso.base;
+
+	ehdr = (void *)app.base;
+	app.name = app.shortname = "library.so";
+	app.phnum = ehdr->e_phnum;
+	app.phdr = laddr(&app, ehdr->e_phoff);
+	app.phentsize = ehdr->e_phentsize;
+	kernel_mapped_dso(&app);
+
+	decode_dyn(&app);
+
+        app.next = NULL;
+        head->next = &app;
+        tail = &app;
+
+	//load_deps(&app);
+
+	reloc_all(&app);
+
+        //for (struct dso *p=head; p; p=p->next)
+        //        add_syms(p);
+
+
+	for (int i=0; app.dynv[i]; i+=2) {
+		if (!DT_DEBUG_INDIRECT && app.dynv[i]==DT_DEBUG)
+			app.dynv[i+1] = (size_t)&debug;
+		if (DT_DEBUG_INDIRECT && app.dynv[i]==DT_DEBUG_INDIRECT) {
+			size_t *ptr = (size_t *) app.dynv[i+1];
+			*ptr = (size_t)&debug;
+		}
+        }
+        debug.ver = 1;
+        debug.bp = dl_debug_state;
+        debug.head = head;
+        debug.base = ldso.base;
+        debug.state = RT_CONSISTENT;
+        _dl_debug_state();
+
+        graal_syscall_handler_set(handler, ctx);
+        
+        return;
+}
+
+
 
 /* Stage 1 of the dynamic linker is defined in dlstart.c. It calls the
  * following stage 2 and stage 3 functions via primitive symbolic lookup
