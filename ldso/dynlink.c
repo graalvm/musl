@@ -24,6 +24,7 @@
 #include "libc.h"
 #include "dynlink.h"
 #include "../src/graalos/graal_syscall.h"
+#include "../src/graalos/musl_loader.h"
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -1631,76 +1632,20 @@ static void install_new_tls(void)
 	__restore_sigs(&set);
 }
 
-struct fake_dso {
-    unsigned char *base;
-    char *name;
-    size_t *dynv;
-    struct dso *next;
-    struct dso *prev;
-    void *empty;
-
-    unsigned char *map;
-    size_t map_len;
-    size_t relro_start, relro_end;
-    Elf64_Phdr *phdr;
-    int phnum;
-    size_t phentsize;
-    Elf64_Sym *syms;
-    uint32_t *ghashtab;
-    int16_t *versym;
-    char *strings;
-    size_t *got;
-
-};
-
-struct auxv_entry {
-    size_t key;
-    size_t value;
-};
-
-
-struct musl_loader {
-    int loader_fd;
-    int library_fd;
-
-    struct fake_dso loader_dso;
-    struct fake_dso library_dso;
-
-    struct auxv_entry auxv[AUX_CNT];
-
-    size_t last_aux_entry;
-
-    void (*debug_state)();
-    void *debug;
-};
-
-
 
 void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx) 
 {
         static struct dso app;
         size_t aux[AUX_CNT];
         size_t dyn[DYN_CNT];
+        pthread_t self;
         
-#if 0
-
-        if (ml->debug && ml->debug_state) {
-            struct debug *d = (struct debug *) ml->debug;
-            //d->state = RT_ADD;
-            (*ml->debug_state)();
-        } else {
-            _dl_debug_state();
-        }
-#endif
-
-
         decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
 
-        //ldso.base = (void *)aux[AT_BASE];
         ldso.base = ml->loader_dso.base;
 
 	Ehdr *ehdr = (void *)ldso.base;
-	ldso.name = ldso.shortname = "libc.so";
+	ldso.name = ldso.shortname = ml->loader_dso.name;
 	ldso.phnum = ehdr->e_phnum;
 	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
 	ldso.phentsize = ehdr->e_phentsize;
@@ -1714,25 +1659,29 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
 	ldso.relocated = 0;
         
 	libc.auxv = (size_t *)ml->auxv;
-	libc.tls_size = sizeof builtin_tls;
+	libc.tls_size = sizeof (builtin_tls);
 	libc.tls_align = tls_align;
+
+        /* This sets FS */
 	if (__init_tp(__copy_tls((void *)builtin_tls)) < 0) {
 		a_crash();
-	}
+        }
+
+        self = pthread_self();
+        self->stack = ml->stack;
+        self->stack_size = ml->stack_size;
 
 	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
-	__pthread_self()->sysinfo = __sysinfo;
+	self->sysinfo = __sysinfo;
 	libc.page_size = aux[AT_PAGESZ];
 	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
 		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
-
-        __environ = calloc(1, sizeof(char *));
 
         runtime = 1;
         app.base = ml->library_dso.base;
 
 	ehdr = (void *)app.base;
-	app.name = app.shortname = "library.so";
+	app.name = app.shortname = ml->library_dso.name;
 	app.phnum = ehdr->e_phnum;
 	app.phdr = laddr(&app, ehdr->e_phoff);
 	app.phentsize = ehdr->e_phentsize;
@@ -1776,7 +1725,9 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
         }
 #endif
 
-        graal_syscall_handler_set(handler, ctx);
+        //graal_syscall_handler_set(handler, ctx);
+        self->syscall = ml->thread_syscall;
+
         
         return;
 }
