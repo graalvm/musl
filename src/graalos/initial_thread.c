@@ -5,13 +5,13 @@
 #include "pthread_impl.h"
 #include "initial_thread.h"
 
-void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx);
+void __init_graal_loader(struct musl_loader *ml);
 
 static int graal_start(void *arg)
 {
     struct musl_loader *ml = arg;
 
-    __init_graal_loader(ml, 0, 0);
+    __init_graal_loader(ml);
 
     if (ml->env) {
         __environ = ml->env;

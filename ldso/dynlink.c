@@ -1633,7 +1633,7 @@ static void install_new_tls(void)
 }
 
 
-void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx) 
+void __init_graal_loader(struct musl_loader *ml) 
 {
         static struct dso app;
         size_t aux[AUX_CNT];
@@ -1677,7 +1677,6 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
 	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
 		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
 
-        runtime = 1;
         app.base = ml->library_dso.base;
 
 	ehdr = (void *)app.base;
@@ -1689,45 +1688,20 @@ void __init_graal_loader(struct musl_loader *ml, void *handler, void *ctx)
 
 	decode_dyn(&app);
 
-        app.next = NULL;
-        head->next = &app;
-        tail = &app;
+        head = &app;
+        head->next = &ldso;
+        tail = &ldso;
+        syms_tail = &app;
 
+	for (struct dso *p=head; p; p=p->next)
+		add_syms(p);
 	//load_deps(&app);
 
 	reloc_all(&app);
-
-        //for (struct dso *p=head; p; p=p->next)
-        //        add_syms(p);
-
-
-#if 0
-	for (int i=0; app.dynv[i]; i+=2) {
-		if (!DT_DEBUG_INDIRECT && app.dynv[i]==DT_DEBUG)
-			app.dynv[i+1] = (size_t)&debug;
-		if (DT_DEBUG_INDIRECT && app.dynv[i]==DT_DEBUG_INDIRECT) {
-			size_t *ptr = (size_t *) app.dynv[i+1];
-			*ptr = (size_t)&debug;
-		}
-        }
-
-        if (ml->debug && ml->debug_state) {
-            struct debug *d = (struct debug *) ml->debug;
-            //d->state = RT_CONSISTENT;
-            (*ml->debug_state)();
-        } else {
-            debug.ver = 1;
-            debug.bp = dl_debug_state;
-            debug.head = head;
-            debug.base = ldso.base;
-            debug.state = RT_CONSISTENT;
-            _dl_debug_state();
-        }
-#endif
+        runtime = 1;
 
         //graal_syscall_handler_set(handler, ctx);
         self->syscall = ml->thread_syscall;
-
         
         return;
 }

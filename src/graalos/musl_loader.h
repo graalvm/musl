@@ -3,7 +3,7 @@
 
 #include <elf.h>
 
-#define AUX_CNT 32
+#define AUX_CNT 38
 
 struct auxv_entry {
     size_t key;
