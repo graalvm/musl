@@ -3,7 +3,12 @@
 
 #include <elf.h>
 
+#ifndef AUX_CNT
 #define AUX_CNT 38
+#endif
+
+/* We need this for the struct match */
+#define _AUX_CNT 38
 
 struct auxv_entry {
     size_t key;
@@ -39,7 +44,7 @@ struct musl_loader {
     struct _dso loader_dso;
     struct _dso library_dso;
 
-    struct auxv_entry auxv[AUX_CNT];
+    struct auxv_entry auxv[_AUX_CNT];
 
     size_t last_aux_entry;
 
@@ -60,6 +65,7 @@ struct musl_loader {
     char **env;
     int (*entry)(int argc, char *argv[]);
     long (*thread_syscall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
+    int (*clone_func)(int (*fn)(void *), void *child_stack, int flags, void *arg, ...);
 
     int initial_tid;
 };

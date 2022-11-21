@@ -1632,13 +1632,32 @@ static void install_new_tls(void)
 	__restore_sigs(&set);
 }
 
+void *graal_init_before_clone(struct musl_loader *ml)
+{
+        struct pthread *self;
 
-void __init_graal_loader(struct musl_loader *ml) 
+	libc.auxv = (size_t *)ml->auxv;
+	libc.tls_size = sizeof (builtin_tls);
+	libc.tls_align = tls_align;
+        libc.can_do_threads = 1;
+
+	self = __copy_tls((void *)builtin_tls);
+
+        self->stack = ml->stack;
+        self->stack_size = ml->stack_size;
+        self->locale = &libc.global_locale;
+
+        self->syscall = ml->thread_syscall;
+        self->self = self;
+        self->next = self->prev = self;
+
+        return self;
+}
+
+void graal_init_after_clone(struct musl_loader *ml)
 {
         static struct dso app;
         size_t aux[AUX_CNT];
-        size_t dyn[DYN_CNT];
-        pthread_t self;
         
         decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
 
@@ -1657,22 +1676,9 @@ void __init_graal_loader(struct musl_loader *ml)
 	reloc_all(&ldso);
 
 	ldso.relocated = 0;
-        
-	libc.auxv = (size_t *)ml->auxv;
-	libc.tls_size = sizeof (builtin_tls);
-	libc.tls_align = tls_align;
-
-        /* This sets FS */
-	if (__init_tp(__copy_tls((void *)builtin_tls)) < 0) {
-		a_crash();
-        }
-
-        self = pthread_self();
-        self->stack = ml->stack;
-        self->stack_size = ml->stack_size;
 
 	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
-	self->sysinfo = __sysinfo;
+	__pthread_self()->sysinfo = __sysinfo;
 	libc.page_size = aux[AT_PAGESZ];
 	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
 		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
@@ -1701,7 +1707,6 @@ void __init_graal_loader(struct musl_loader *ml)
         runtime = 1;
 
         //graal_syscall_handler_set(handler, ctx);
-        self->syscall = ml->thread_syscall;
         
         return;
 }

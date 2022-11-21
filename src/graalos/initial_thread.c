@@ -5,13 +5,14 @@
 #include "pthread_impl.h"
 #include "initial_thread.h"
 
-void __init_graal_loader(struct musl_loader *ml);
+void graal_init_after_clone(struct musl_loader *ml);
+void *graal_init_before_clone(struct musl_loader *ml);
 
 static int graal_start(void *arg)
 {
     struct musl_loader *ml = arg;
 
-    __init_graal_loader(ml);
+    graal_init_after_clone(ml);
 
     if (ml->env) {
         __environ = ml->env;
@@ -31,7 +32,7 @@ long graalos_initial_thread(struct musl_loader *ml)
     unsigned flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND
         | CLONE_THREAD | CLONE_SYSVSEM | CLONE_SETTLS
         | CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID | CLONE_DETACHED;
-    struct musl_loader *sml = 0;
+    struct pthread *self = graal_init_before_clone(ml);
 
 
     /*
@@ -40,15 +41,12 @@ long graalos_initial_thread(struct musl_loader *ml)
      *    via pthread_create.
      * 2. Setup pthread_keys.  pthread_create_key or pthread_create
      *    for subsequent threads will set that up.
-     *
-     * Like the main thread of an executable, this thread will use a static
-     * variable for the file locks, pthread_keys, pthread_t, and TLS.
      */
 
     stack = ml->stack;
     stack += ml->stack_size;
 
-    return  __clone(graal_start, stack, flags, ml, ml->initial_tid, 0, __thread_list_lock);
+    return  (ml->clone_func)(graal_start, stack, flags, ml, &ml->initial_tid, TP_ADJ(self), &__thread_list_lock);
 
 }
     
