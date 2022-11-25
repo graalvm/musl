@@ -65,6 +65,7 @@ struct musl_loader {
     char **env;
     int (*entry)(int argc, char *argv[]);
     int (*clone_func)(int (*fn)(void *), void *child_stack, void *ml, int* tid, void* tls, volatile void* tl_lock, void* tp);
+    long (*syscall_handler)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
 
     int initial_tid;
 };

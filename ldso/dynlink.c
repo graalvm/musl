@@ -1652,6 +1652,9 @@ void *graal_init_before_clone(struct musl_loader *ml)
     self->self = self;
     self->next = self->prev = self;
 
+    // this is done here to support the simple graalos_clone (musl __clone copied to the visor)
+    self->syscall = ml->syscall_handler;
+
     return self;
 }
 
