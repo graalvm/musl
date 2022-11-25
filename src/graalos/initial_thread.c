@@ -26,14 +26,9 @@ static int graal_start(void *arg)
     return 0;
 }
 
-long graalos_initial_thread(struct musl_loader *ml)
+int graalos_initial_thread(struct musl_loader *ml, void* tp)
 {
-    unsigned char *stack = 0;
-    unsigned flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND
-        | CLONE_THREAD | CLONE_SYSVSEM | CLONE_SETTLS
-        | CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID | CLONE_DETACHED;
     struct pthread *self = graal_init_before_clone(ml);
-
 
     /*
      * New pthreads do somethings that we aren't going to do here.
@@ -43,11 +38,8 @@ long graalos_initial_thread(struct musl_loader *ml)
      *    for subsequent threads will set that up.
      */
 
-    stack = ml->stack;
-    stack += ml->stack_size;
-
-    return  (ml->clone_func)(graal_start, stack, flags, ml, &ml->initial_tid, TP_ADJ(self), &__thread_list_lock);
-
+    unsigned char *stack = (unsigned char*)ml->stack + ml->stack_size;
+    return  (ml->clone_func)(graal_start, stack, ml, &ml->initial_tid, TP_ADJ(self), &__thread_list_lock, tp);
 }
     
      
