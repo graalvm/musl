@@ -1690,6 +1690,10 @@ void graal_init_after_clone(struct musl_loader *ml)
 	app.phnum = ehdr->e_phnum;
 	app.phdr = laddr(&app, ehdr->e_phoff);
 	app.phentsize = ehdr->e_phentsize;
+        app.tls.align = ml->library_dso.tls.align;
+        app.tls.len = ml->library_dso.tls.len;
+        app.tls.size = ml->library_dso.tls.size;
+        app.tls.image = ml->library_dso.tls.image;
 	kernel_mapped_dso(&app);
 
 	decode_dyn(&app);
@@ -1701,13 +1705,66 @@ void graal_init_after_clone(struct musl_loader *ml)
 
 	for (struct dso *p=head; p; p=p->next)
 		add_syms(p);
-	//load_deps(&app);
+
+	if (app.tls.size) {
+		libc.tls_head = tls_tail = &app.tls;
+		app.tls_id = tls_cnt = 1;
+#ifdef TLS_ABOVE_TP
+		app.tls.offset = GAP_ABOVE_TP;
+		app.tls.offset += (-GAP_ABOVE_TP + (uintptr_t)app.tls.image)
+			& (app.tls.align-1);
+		tls_offset = app.tls.offset + app.tls.size;
+#else
+		tls_offset = app.tls.offset = app.tls.size
+			+ ( -((uintptr_t)app.tls.image + app.tls.size)
+			& (app.tls.align-1) );
+#endif
+		tls_align = MAXP2(tls_align, app.tls.align);
+	}
+
+	update_tls_size();
+	void *initial_tls = builtin_tls;
+	if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
+		initial_tls = calloc(libc.tls_size, 1);
+		if (!initial_tls) {
+			dprintf(2, "Error getting %zu bytes thread-local storage: %m\n",
+				libc.tls_size);
+			_exit(127);
+		}
+	}
+	static_tls_cnt = tls_cnt;
+
+	if (initial_tls != builtin_tls) {
+		if (__init_tp(__copy_tls(initial_tls)) < 0) {
+			a_crash();
+		} else {
+                        /* Reinitialize variables in self
+                         * because we created a new self to
+                         * accommodate the tls size. */
+                        pthread_t self = __pthread_self();
+                        self->stack = ml->stack;
+                        self->stack_size = ml->stack_size;
+                        self->locale = &libc.global_locale;
+
+                        self->syscall = ml->thread_syscall;
+                        self->self = self;
+                        self->next = self->prev = self;
+                }
+
+	} else {
+		size_t tmp_tls_size = libc.tls_size;
+		pthread_t self = __pthread_self();
+		/* Temporarily set the tls size to the full size of
+		 * builtin_tls so that __copy_tls will use the same layout
+		 * as it did for before. Then check, just to be safe. */
+		libc.tls_size = sizeof builtin_tls;
+		if (__copy_tls((void*)builtin_tls) != self) a_crash();
+		libc.tls_size = tmp_tls_size;
+	}
 
 	reloc_all(&app);
         runtime = 1;
 
-        //graal_syscall_handler_set(handler, ctx);
-        
         return;
 }
 
