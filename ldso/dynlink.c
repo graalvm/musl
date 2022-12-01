@@ -1750,7 +1750,7 @@ void graal_init_after_clone(struct musl_loader *ml)
                         self->stack_size = ml->stack_size;
                         self->locale = &libc.global_locale;
 
-                        self->syscall = ml->thread_syscall;
+                        self->syscall = ml->syscall_handler;
                         self->self = self;
                         self->next = self->prev = self;
                 }
