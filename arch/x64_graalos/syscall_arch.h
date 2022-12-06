@@ -47,6 +47,6 @@ static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long
 
 #define IPC_64 0
 
-#define __VISORCALL_CLONE               ((1ul<<63) | (0))
-#define __VISORCALL_UNMAPSELF           ((1ul<<63) | (1))
+#define __VISORCALL_CLONE               ((1ul<<63) | (1ul))
+#define __VISORCALL_UNMAPSELF           ((1ul<<63) | (2ul))
 

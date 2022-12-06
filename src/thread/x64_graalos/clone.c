@@ -11,27 +11,27 @@ struct clone_params_t
     int   (*func)(void *);
     int     flags;
     void*   arg;
+    void*   stack;
+    void*   tls;
     pid_t*  ptid;
     pid_t*  ctid;
 };
 
 
-int clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
+int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
     params.func = func;
     params.flags = flags;
     params.arg = arg;
+    params.stack = stack;
 
     va_list ap;
-    pid_t *ptid, *ctid;
-    void  *tls;
-
     va_start(ap, arg);
     params.ptid = va_arg(ap, pid_t *);
-           tls  = va_arg(ap, void *);
+    params.tls  = va_arg(ap, void *);
     params.ctid = va_arg(ap, pid_t *);
     va_end(ap);
 
-    return __syscall_ret(__syscall3(__VISORCALL_CLONE, &params, stack, tls));
+    return __syscall_ret(__syscall1(__VISORCALL_CLONE, &params));
 }
