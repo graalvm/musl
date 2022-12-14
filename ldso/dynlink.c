@@ -1568,6 +1568,8 @@ weak_alias(dl_debug_state, _dl_debug_state);
 
 void __init_tls(size_t *auxv)
 {
+    // this function provides a strong alias for the symbol __init_tls, ensuring that the static_init_tls weak_alias
+    // is not bound to this symbol in __init_tls.c
 }
 
 static void update_tls_size()
@@ -1634,34 +1636,36 @@ static void install_new_tls(void)
 
 void *graal_init_before_clone(struct musl_loader *ml)
 {
-        struct pthread *self;
+    struct pthread *self;
 
 	libc.auxv = (size_t *)ml->auxv;
 	libc.tls_size = sizeof (builtin_tls);
 	libc.tls_align = tls_align;
-        libc.can_do_threads = 1;
+    libc.can_do_threads = 1;
 
 	self = __copy_tls((void *)builtin_tls);
 
-        self->stack = ml->stack;
-        self->stack_size = ml->stack_size;
-        self->locale = &libc.global_locale;
+    self->stack = ml->stack;
+    self->stack_size = ml->stack_size;
+    self->locale = &libc.global_locale;
 
-        self->syscall = ml->thread_syscall;
-        self->self = self;
-        self->next = self->prev = self;
+    self->self = self;
+    self->next = self->prev = self;
 
-        return self;
+    // this is done here to support the simple graalos_clone (musl __clone copied to the visor)
+    self->syscall = ml->syscall_handler;
+
+    return self;
 }
 
 void graal_init_after_clone(struct musl_loader *ml)
 {
-        static struct dso app;
-        size_t aux[AUX_CNT];
-        
-        decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
+    static struct dso app;
+    size_t aux[AUX_CNT];
 
-        ldso.base = ml->loader_dso.base;
+    decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
+
+    ldso.base = ml->loader_dso.base;
 
 	Ehdr *ehdr = (void *)ldso.base;
 	ldso.name = ldso.shortname = ml->loader_dso.name;
@@ -1683,7 +1687,7 @@ void graal_init_after_clone(struct musl_loader *ml)
 	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
 		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
 
-        app.base = ml->library_dso.base;
+    app.base = ml->library_dso.base;
 
 	ehdr = (void *)app.base;
 	app.name = app.shortname = ml->library_dso.name;
@@ -1698,10 +1702,10 @@ void graal_init_after_clone(struct musl_loader *ml)
 
 	decode_dyn(&app);
 
-        head = &app;
-        head->next = &ldso;
-        tail = &ldso;
-        syms_tail = &app;
+    head = &app;
+    head->next = &ldso;
+    tail = &ldso;
+    syms_tail = &app;
 
 	for (struct dso *p=head; p; p=p->next)
 		add_syms(p);
@@ -1746,7 +1750,7 @@ void graal_init_after_clone(struct musl_loader *ml)
                         self->stack_size = ml->stack_size;
                         self->locale = &libc.global_locale;
 
-                        self->syscall = ml->thread_syscall;
+                        self->syscall = ml->syscall_handler;
                         self->self = self;
                         self->next = self->prev = self;
                 }
@@ -1763,9 +1767,7 @@ void graal_init_after_clone(struct musl_loader *ml)
 	}
 
 	reloc_all(&app);
-        runtime = 1;
-
-        return;
+    runtime = 1;
 }
 
 

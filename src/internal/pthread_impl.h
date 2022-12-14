@@ -36,7 +36,7 @@ struct pthread {
 	int errno_val;
 
 #ifdef PER_THREAD_SYSCALL
-        long (*syscall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
+    long (*syscall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
 #endif /* PER_THREAD_SYSCALL */
 
 	volatile int detach_state;

@@ -1,10 +1,8 @@
+# Copyright (c) 2022 Oracle and/or its affiliates. All rights reserved.
 .global vfork
 .type vfork,@function
 vfork:
-	pop %rdx
-	mov $58,%eax
-	syscall
-	push %rdx
+	mov $-38,%eax
 	mov %rax,%rdi
 	.hidden __syscall_ret
 	jmp __syscall_ret
