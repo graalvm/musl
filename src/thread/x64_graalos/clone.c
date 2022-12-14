@@ -9,7 +9,7 @@
 struct clone_params_t
 {
     int   (*func)(void *);
-    int     flags;
+    //int     flags;
     void*   arg;
     void*   stack;
     void*   tls;
@@ -22,7 +22,7 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
     params.func = func;
-    params.flags = flags;
+    //params.flags = flags;
     params.arg = arg;
     params.stack = stack;
 
