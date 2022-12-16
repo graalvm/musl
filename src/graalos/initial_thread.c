@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "libc.h"
 #include "pthread_impl.h"
 #include "initial_thread.h"
@@ -20,6 +21,11 @@ static int graal_start(void *arg)
         __environ = calloc(1, sizeof(char *));
     }
 
+    // give graalos a chance to assert its control over scheduling and priority of this isolate thread and its eventual children
+    struct sched_param param;
+    pthread_t t = __pthread_self();
+	__syscall(SYS_sched_getparam, t->tid, &param);
+    __syscall(SYS_sched_setparam, t->tid, &param);
 
     exit((*ml->entry)(ml->argc, ml->argv));
 
