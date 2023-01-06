@@ -1,3 +1,4 @@
+// Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 #define __SYSCALL_LL_E(x) (x)
 #define __SYSCALL_LL_O(x) (x)
 

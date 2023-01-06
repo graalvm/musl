@@ -1,3 +1,4 @@
+// Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 #include "pthread_impl.h"
 #include "graal_syscall.h"
 

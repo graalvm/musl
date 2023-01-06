@@ -1,4 +1,6 @@
+// Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 #include "syscall.h"
+
 //extern hidden long __cancel();
 //
 //long __syscall_cp_asm(volatile void *cancel, syscall_arg_t a1,

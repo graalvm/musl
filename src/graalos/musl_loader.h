@@ -1,3 +1,4 @@
+// Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 #ifndef __MUSL_LOADER_H
 #define __MUSL_LOADER_H
 
