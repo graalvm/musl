@@ -1,3 +1,4 @@
+# Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 .text
 .global __tlsdesc_static
 .hidden __tlsdesc_static
