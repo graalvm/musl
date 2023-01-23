@@ -47,5 +47,5 @@ static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long
 
 #define IPC_64 0
 
-#include "graalos/syscall.h"
+#include <graalos/syscall.h>
 #include "syscall_internal.h"
