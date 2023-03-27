@@ -9,10 +9,8 @@
 
 static int is_thread_dead(pid_t pid, pid_t tid)
 {
-    if (__syscall(SYS_tgkill, pid, tid, 0) == -1)
-        return (errno == ESRCH);
-    else
-        return 0;
+    long err = __syscall(SYS_tgkill, pid, tid, 0);
+    return ((err < 0) && (err != -EAGAIN));
 }
 
 static void dummy1(pthread_t t)
