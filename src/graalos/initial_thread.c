@@ -46,7 +46,7 @@ int graalos_initial_thread(struct musl_loader *ml, void* tp)
      */
 
     unsigned char *stack = (unsigned char*)ml->stack + ml->stack_size;
-    return  (ml->clone_func)(graal_start, stack, ml, &ml->initial_tid, TP_ADJ(self), &__thread_list_lock, tp);
+    return  (ml->clone_func)(graal_start, stack, ml, &self->tid, TP_ADJ(self), &__thread_list_lock, tp);
 }
     
      

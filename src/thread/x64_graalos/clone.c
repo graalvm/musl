@@ -5,6 +5,7 @@
 #include <sched.h>
 #include "pthread_impl.h"
 #include "syscall.h"
+#include "syscall_internal.h"
 
 struct clone_params_t
 {
@@ -22,9 +23,9 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
     params.func = func;
+    params.stack = stack;
     //params.flags = flags;
     params.arg = arg;
-    params.stack = stack;
 
     va_list ap;
     va_start(ap, arg);
@@ -33,5 +34,5 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
     params.ctid = va_arg(ap, pid_t *);
     va_end(ap);
 
-    return __syscall_ret(__syscall1(__VISORCALL_CLONE, &params));
+    return __syscall_ret(__syscall1(__VISORCALL_clone, &params));
 }
