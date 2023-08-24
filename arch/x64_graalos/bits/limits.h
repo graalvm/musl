@@ -1,1 +1,1 @@
-#define PAGESIZE 4096
+../../../arch/x86_64/bits/limits.h

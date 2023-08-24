@@ -1,7 +1,1 @@
-.global atanl
-.type atanl,@function
-atanl:
-	fldt 8(%rsp)
-	fld1
-	fpatan
-	ret
+../../../src/math/x86_64/atanl.s
