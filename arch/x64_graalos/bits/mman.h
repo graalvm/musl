@@ -1,1 +1,1 @@
-#define MAP_32BIT      0x40
+../../../arch/x86_64/bits/mman.h

@@ -1,7 +1,1 @@
-#include <math.h>
-
-float sqrtf(float x)
-{
-	__asm__ ("sqrtss %1, %0" : "=x"(x) : "x"(x));
-	return x;
-}
+../../../src/math/x86_64/sqrtf.c

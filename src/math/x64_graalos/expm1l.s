@@ -1,1 +1,1 @@
-# see exp2l.s
+../../../src/math/x86_64/expm1l.s

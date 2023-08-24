@@ -1,7 +1,1 @@
-#include <math.h>
-
-long double fabsl(long double x)
-{
-	__asm__ ("fabs" : "+t"(x));
-	return x;
-}
+../../../src/math/x86_64/fabsl.c

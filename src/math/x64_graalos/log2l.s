@@ -1,7 +1,1 @@
-.global log2l
-.type log2l,@function
-log2l:
-	fld1
-	fldt 8(%rsp)
-	fyl2x
-	ret
+../../../src/math/x86_64/log2l.s

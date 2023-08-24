@@ -1,7 +1,1 @@
-.section .init
-	pop %rax
-	ret
-
-.section .fini
-	pop %rax
-	ret
+../../crt/x86_64/crtn.s

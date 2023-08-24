@@ -1,7 +1,1 @@
-#include <math.h>
-
-long double rintl(long double x)
-{
-	__asm__ ("frndint" : "+t"(x));
-	return x;
-}
+../../../src/math/x86_64/rintl.c
