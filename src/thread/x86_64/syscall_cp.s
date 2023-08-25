@@ -12,6 +12,9 @@
 __syscall_cp_asm:
 
 __cp_begin:
+#ifdef __CET__
+        endbr64
+#endif
 	mov (%rdi),%eax
 	test %eax,%eax
 	jnz __cp_cancel

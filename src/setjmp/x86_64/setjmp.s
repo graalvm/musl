@@ -8,6 +8,9 @@
 __setjmp:
 _setjmp:
 setjmp:
+#ifdef __CET__
+        endbr64
+#endif
 	mov %rbx,(%rdi)         /* rdi is jmp_buf, move registers onto it */
 	mov %rbp,8(%rdi)
 	mov %r12,16(%rdi)

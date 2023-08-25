@@ -3,6 +3,9 @@
 .hidden __clone
 .type   __clone,@function
 __clone:
+#ifdef __CET__
+        endbr64
+#endif
 	xor %eax,%eax
 	mov $56,%al
 	mov %rdi,%r11

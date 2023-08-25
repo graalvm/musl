@@ -5,6 +5,9 @@
 .type longjmp,@function
 _longjmp:
 longjmp:
+#ifdef __CET__
+        endbr64
+#endif
 	xor %eax,%eax
 	cmp $1,%esi             /* CF = val ? 0 : 1 */
 	adc %esi,%eax           /* eax = val + !val */

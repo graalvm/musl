@@ -4,6 +4,9 @@
 .type memcpy,@function
 memcpy:
 __memcpy_fwd:
+#ifdef __CET__
+        endbr64
+#endif
 	mov %rdi,%rax
 	cmp $8,%rdx
 	jc 1f

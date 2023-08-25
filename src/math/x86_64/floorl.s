@@ -1,6 +1,9 @@
 .global floorl
 .type floorl,@function
 floorl:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 1:	mov $0x7,%al
 1:	fstcw 8(%rsp)
@@ -15,6 +18,9 @@ floorl:
 .global ceill
 .type ceill,@function
 ceill:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 	mov $0xb,%al
 	jmp 1b
@@ -22,6 +28,9 @@ ceill:
 .global truncl
 .type truncl,@function
 truncl:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 	mov $0xf,%al
 	jmp 1b

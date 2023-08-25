@@ -1,0 +1,78 @@
+#!/bin/bash
+
+readonly SELF_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+if [ -f $SELF_DIR/wrapper_patch ]; then
+   source $SELF_DIR/wrapper_patch
+fi
+
+cc="@CC@++"
+libc="@PREFIX@"
+libc_inc="@INCDIR@"
+libc_lib="@LIBDIR@"
+libcxx="@LIBCXXDIR@"
+wrapper_flags="@CLANG_WRAPPER_FLAGS@ $cpp_wrapper_flags"
+thisdir="`cd "$(dirname "$0")"; pwd`"
+static_libgcc=
+set_isystem=1
+linker=musl-clang++
+
+# prevent clang from running the linker (and erroring) on no input.
+sflags=
+eflags=
+for x ; do
+    case "$x" in
+       # -r indicates that the output is an ordinary relocatable object file and 
+       # thus we will not forward to the ld.musl-clang++ wrapper
+       -r) linker=lld ;;
+       # This case is here to enable compiler-rt build against musl.
+       # Some components (fuzzer) use custom libc++ and therefore we cannot set -isystem as 
+       # it would collide with that. -DLIBCXX_BUILDING_LIBCXXABI seems to indicate the case.
+       -DLIBCXX_BUILDING_LIBCXXABI) set_isystem= ;;
+       # Do no set -isystem as long as it is specified
+       -isystem) set_isystem= ;;
+       -l*) input=1 ;;
+        *) input= ;;
+    esac
+    if test "$input" ; then
+        sflags="-l-user-start"
+        eflags="-l-user-end"
+        break
+    fi
+done
+
+if test "$set_isystem" ; then
+exec $cc \
+    -B"$thisdir" \
+    -fuse-ld=$linker \
+    -nostdlib \
+    -nostdinc++ \
+    -nostdlib++ \
+    --sysroot "$libc" \
+    -isystem "$libcxx/include/c++/v1" \
+    -D_LIBCPP_HAS_MUSL_LIBC \
+    -L-user-start \
+    $wrapper_flags \
+    $sflags \
+    "$@" \
+    $eflags \
+    -L"$libc_lib" \
+    -L"$libcxx/lib" \
+    -L-user-end
+else
+exec $cc \
+    -B"$thisdir" \
+    -fuse-ld=$linker \
+    -nostdlib \
+    -nostdinc++ \
+    -nostdlib++ \
+    --sysroot "$libc" \
+    -D_LIBCPP_HAS_MUSL_LIBC \
+    -L-user-start \
+    $wrapper_flags \
+    $sflags \
+    "$@" \
+    $eflags \
+    -L"$libc_lib" \
+    -L"$libcxx/lib" \
+    -L-user-end
+fi

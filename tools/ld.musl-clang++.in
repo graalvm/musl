@@ -37,10 +37,14 @@ for x ; do
             userlink=
             ;;
         crtbegin*.o|crtend*.o)
+            #set -- "$@" $($cc -print-file-name=$x)
             ;;
         -lgcc|-lgcc_eh)
-            file=lib${x#-l}.a
-            set -- "$@" $($cc -print-file-name=$file)
+            #file=lib${x#-l}.a
+            #set -- "$@" $($cc -print-file-name=$file)
+            ;;
+        -lc++)
+            set -- "$@" "$x" "-lunwind"
             ;;
         -l*)
             test "$userlink" && set -- "$@" "$x"
@@ -48,6 +52,7 @@ for x ; do
         -shared)
             shared=1
             set -- "$@" -shared
+            # do not link the start CRT object for a shared lib
             scrt=
             ;;
         -sysroot=*|--sysroot=*)
@@ -63,13 +68,12 @@ if [ -f "$libcxx/lib/linux/libclang_rt.builtins-x86_64.a" ]; then
 fi
 
 #exec $($cc -print-prog-name=ld) -nostdlib "$@" -lc -dynamic-linker "$ldso"
-exec $ld \
--nostdlib \
+exec $ld -nostdlib \
 $scrt \
+$libc_lib/crti.o \
 "$@" \
--L$libc_lib \
+$libc_lib/crtn.o \
 -L$libcxx/lib/linux/ \
 -rpath="$libc_lib:$libcxx/lib:$libcxx/lib/linux/" \
 --as-needed $builtins_lib --no-as-needed \
--lc \
--dynamic-linker "$ldso"
+-lc -dynamic-linker "$ldso"

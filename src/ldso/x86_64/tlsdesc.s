@@ -3,6 +3,9 @@
 .hidden __tlsdesc_static
 .type __tlsdesc_static,@function
 __tlsdesc_static:
+#ifdef __CET__
+        endbr64
+#endif
 	mov 8(%rax),%rax
 	ret
 
@@ -10,6 +13,9 @@ __tlsdesc_static:
 .hidden __tlsdesc_dynamic
 .type __tlsdesc_dynamic,@function
 __tlsdesc_dynamic:
+#ifdef __CET__
+        endbr64
+#endif
 	mov 8(%rax),%rax
 	push %rdx
 	mov %fs:8,%rdx

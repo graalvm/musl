@@ -1,6 +1,9 @@
 .global memmove
 .type memmove,@function
 memmove:
+#ifdef __CET__
+        endbr64
+#endif
 	mov %rdi,%rax
 	sub %rsi,%rax
 	cmp %rdx,%rax

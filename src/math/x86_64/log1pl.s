@@ -1,6 +1,9 @@
 .global log1pl
 .type log1pl,@function
 log1pl:
+#ifdef __CET__
+        endbr64
+#endif
 	mov 14(%rsp),%eax
 	fldln2
 	and $0x7fffffff,%eax
