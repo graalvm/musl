@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 readonly SELF_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 if [ -f $SELF_DIR/wrapper_patch ]; then
