@@ -1,6 +1,9 @@
 .global asinl
 .type asinl,@function
 asinl:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 1:	fld %st(0)
 	fld1

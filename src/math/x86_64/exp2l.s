@@ -1,6 +1,9 @@
 .global expm1l
 .type expm1l,@function
 expm1l:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 	fldl2e
 	fmulp
@@ -30,6 +33,9 @@ expm1l:
 .global exp2l
 .type exp2l,@function
 exp2l:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 1:	fld %st(0)
 	sub $16,%rsp

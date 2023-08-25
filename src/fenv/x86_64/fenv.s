@@ -2,6 +2,9 @@
 .type feclearexcept,@function
 feclearexcept:
 		# maintain exceptions in the sse mxcsr, clear x87 exceptions
+#ifdef __CET__
+         endbr64
+#endif
 	mov %edi,%ecx
 	and $0x3f,%ecx
 	fnstsw %ax
@@ -22,6 +25,10 @@ feclearexcept:
 .global feraiseexcept
 .type feraiseexcept,@function
 feraiseexcept:
+
+#ifdef __CET__
+         endbr64
+#endif
 	and $0x3f,%edi
 	stmxcsr -8(%rsp)
 	or %edi,-8(%rsp)
@@ -33,6 +40,9 @@ feraiseexcept:
 .hidden __fesetround
 .type __fesetround,@function
 __fesetround:
+#ifdef __CET__
+         endbr64
+#endif
 	push %rax
 	xor %eax,%eax
 	mov %edi,%ecx
@@ -51,6 +61,9 @@ __fesetround:
 .global fegetround
 .type fegetround,@function
 fegetround:
+#ifdef __CET__
+         endbr64
+#endif
 	push %rax
 	stmxcsr (%rsp)
 	pop %rax
@@ -61,6 +74,9 @@ fegetround:
 .global fegetenv
 .type fegetenv,@function
 fegetenv:
+#ifdef __CET__
+         endbr64
+#endif
 	xor %eax,%eax
 	fnstenv (%rdi)
 	stmxcsr 28(%rdi)
@@ -69,6 +85,9 @@ fegetenv:
 .global fesetenv
 .type fesetenv,@function
 fesetenv:
+#ifdef __CET__
+         endbr64
+#endif
 	xor %eax,%eax
 	inc %rdi
 	jz 1f
@@ -88,6 +107,9 @@ fesetenv:
 .global fetestexcept
 .type fetestexcept,@function
 fetestexcept:
+#ifdef __CET__
+         endbr64
+#endif
 	and $0x3f,%edi
 	push %rax
 	stmxcsr (%rsp)

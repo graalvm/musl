@@ -1,0 +1,6 @@
+#!/bin/sh
+SANDBOX_TRUSTED_GCC_MUSL_HOME=$SANDBOX_HOME/x86_64-linux-musl-native-gcc
+PREFIX="${PREFIX:-${SANDBOX_TRUSTED_GCC_MUSL_HOME}}"
+ALTBUILD=gcc \
+./configure --prefix=$PREFIX --syslibdir=$PREFIX/lib "$@"
+

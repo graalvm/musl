@@ -72,8 +72,10 @@ ALL_TOOLS = obj/musl-gcc
 
 WRAPCC_GCC = gcc
 WRAPCC_CLANG = clang
+WRAPCC_LD = ld
 
 LDSO_PATHNAME = $(syslibdir)/ld-musl-$(ARCH)$(SUBARCH).so.1
+DYNLOADER = $(LDSO_PATHNAME)
 
 -include config.mak
 -include $(srcdir)/arch/$(ARCH)/arch.mak
@@ -185,7 +187,11 @@ obj/musl-gcc: config.mak
 	chmod +x $@
 
 obj/%-clang: $(srcdir)/tools/%-clang.in config.mak
-	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@PREFIX@!$(prefix)!g' -e 's!@INCDIR@!$(includedir)!g' -e 's!@LIBDIR@!$(libdir)!g' -e 's!@LDSO@!$(LDSO_PATHNAME)!g' $< > $@
+	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$$PREFIX_BASE$(prefix)!g' -e 's!@INCDIR@!$$PREFIX_BASE$(includedir)!g' -e 's!@LIBDIR@!$$PREFIX_BASE$(libdir)!g' -e 's!@LIBCXXDIR@!$$PREFIX_BASE$(libcxxdir)!g' -e 's!@LDSO@!$$PREFIX_BASE$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
+	chmod +x $@
+
+obj/%-clang++: $(srcdir)/tools/%-clang++.in config.mak
+	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$$PREFIX_BASE$(prefix)!g' -e 's!@INCDIR@!$$PREFIX_BASE$(includedir)!g' -e 's!@LIBDIR@!$$PREFIX_BASE$(libdir)!g' -e 's!@LIBCXXDIR@!$$PREFIX_BASE$(libcxxdir)!g' -e 's!@LDSO@!$$PREFIX_BASE$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
 	chmod +x $@
 
 $(DESTDIR)$(bindir)/%: obj/%
@@ -210,7 +216,7 @@ $(DESTDIR)$(includedir)/%: $(srcdir)/include/%
 	$(INSTALL) -D -m 644 $< $@
 
 $(DESTDIR)$(LDSO_PATHNAME): $(DESTDIR)$(libdir)/libc.so
-	$(INSTALL) -D -l $(libdir)/libc.so $@ || true
+	$(INSTALL) -D -l $(DESTDIR)$(libdir)/libc.so $@ || true
 
 install-libs: $(ALL_LIBS:lib/%=$(DESTDIR)$(libdir)/%) $(if $(SHARED_LIBS),$(DESTDIR)$(LDSO_PATHNAME),)
 

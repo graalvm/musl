@@ -6,6 +6,9 @@
 .global expl
 .type expl,@function
 expl:
+#ifdef __CET__
+        endbr64
+#endif
 	fldt 8(%rsp)
 
 		# interesting case: 0x1p-32 <= |x| < 16384
