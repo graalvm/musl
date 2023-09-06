@@ -5,7 +5,7 @@
 sigsetjmp:
 __sigsetjmp:
 #ifdef __CET__
-        endbr64
+	endbr64
 #endif
 	test %esi,%esi
 	jz 1f

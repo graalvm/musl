@@ -4,7 +4,7 @@
 .type __restore_rt,@function
 __restore_rt:
 #ifdef __CET__
-        endbr64
+	endbr64
 #endif
 	mov $15, %rax
 	syscall
