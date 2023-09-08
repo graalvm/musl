@@ -1,10 +1,15 @@
 #!/bin/bash
 
+# first argument needs to be the LLVM_HOME
+
 readonly SELF_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+LLVM_HOME=$1
+shift
 
 CFLAGS="-sandbox -gdwarf-3 $CFLAGS" \
 CLANG_WRAPPER_FLAGS=-sandbox \
-LLVM_HOME=/home/opc/zslajchrt/native-sandbox-build/graal-enterprise/sandbox-toolchains/mxbuild/linux-amd64/SANDBOX_LLVM/usr \
+LLVM_HOME=$LLVM_HOME \
 CLANG=$LLVM_HOME/bin/clang \
 LLD=$LLVM_HOME/bin/ld.lld \
 CC=$CLANG \
