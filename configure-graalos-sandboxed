@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# LLVM_HOME must be passed as an env var
+
+if [[ -z "${LLVM_HOME}" ]]; then
+  echo "LLVM env var is undefined"
+  exit -1
+fi
+
+readonly SELF_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+CFLAGS="-sandbox -gdwarf-3 $CFLAGS" \
+CLANG_WRAPPER_FLAGS=-sandbox \
+CLANG=$LLVM_HOME/bin/clang \
+LLD=$LLVM_HOME/bin/ld.lld \
+CC=$CLANG \
+LD=$LLD \
+AR=$LLVM_HOME/bin/llvm-ar \
+RANLIB=$LLVM_HOME/bin/llvm-ranlib \
+CLANGXX=$LLVM_HOME/bin/clang++ \
+LLVM_LINK=$LLVM_HOME/bin/llvm-link \
+LLVM_OBJCOPY=$LLVM_HOME/bin/llvm-objcopy \
+LLVM_AR=$LLVM_HOME/bin/llvm-ar \
+LLVM_RANLIB=$LLVM_HOME/bin/llvm-ranlib \
+LLVM_CONFIG=$LLVM_HOME/bin/llvm-config \
+LIBCC="-L$LLVM_HOME/../../llvm-runtimes-musl/amd64/usr/lib/linux -lclang_rt.builtins-x86_64" \
+$SELF_DIR/configure --enable-wrapper=clang --target=x64_graalos --libcxxdir=$LIBCXX "$@"
+
