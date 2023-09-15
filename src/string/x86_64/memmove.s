@@ -1,6 +1,10 @@
 .global memmove
 .type memmove,@function
+.extern __x86_return_thunk
 memmove:
+#ifdef __CET__
+	endbr64
+#endif
 	mov %rdi,%rax
 	sub %rsi,%rax
 	cmp %rdx,%rax
@@ -13,4 +17,8 @@ memmove:
 	rep movsb
 	cld
 	lea 1(%rdi),%rax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif

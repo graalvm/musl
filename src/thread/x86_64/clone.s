@@ -2,7 +2,11 @@
 .global __clone
 .hidden __clone
 .type   __clone,@function
+.extern __x86_return_thunk
 __clone:
+#ifdef __CET__
+	endbr64
+#endif
 	xor %eax,%eax
 	mov $56,%al
 	mov %rdi,%r11
@@ -25,4 +29,9 @@ __clone:
 	mov $60,%al
 	syscall
 	hlt
-1:	ret
+1:
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
+	ret
+#endif

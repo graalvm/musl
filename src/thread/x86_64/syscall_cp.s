@@ -9,9 +9,13 @@
 .global __syscall_cp_asm
 .hidden __syscall_cp_asm
 .type   __syscall_cp_asm,@function
+.extern __x86_return_thunk
 __syscall_cp_asm:
 
 __cp_begin:
+#ifdef __CET__
+	endbr64
+#endif
 	mov (%rdi),%eax
 	test %eax,%eax
 	jnz __cp_cancel
@@ -26,6 +30,10 @@ __cp_begin:
 	mov %r11,8(%rsp)
 	syscall
 __cp_end:
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 __cp_cancel:
 	jmp __cancel

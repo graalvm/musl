@@ -1,6 +1,10 @@
 .global expm1l
 .type expm1l,@function
+.extern __x86_return_thunk
 expm1l:
+#ifdef __CET__
+	endbr64
+#endif
 	fldt 8(%rsp)
 	fldl2e
 	fmulp
@@ -12,24 +16,39 @@ expm1l:
 		# x*log2e <= -65, return -1 without underflow
 	fstp %st(1)
 	fchs
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 1:	fld %st(1)
 	fabs
 	fucomip %st(1),%st
 	fstp %st(0)
 	ja 1f
 	f2xm1
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 1:	push %rax
 	call 1f
 	pop %rax
 	fld1
 	fsubrp
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global exp2l
 .type exp2l,@function
 exp2l:
+#ifdef __CET__
+	endbr64
+#endif
 	fldt 8(%rsp)
 1:	fld %st(0)
 	sub $16,%rsp
@@ -64,7 +83,11 @@ exp2l:
 1:	fscale
 	fstp %st(1)
 	add $16,%rsp
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 3:	xor %eax,%eax
 4:	cmp $0x3fff-64,%ax
 	fld1
@@ -80,4 +103,8 @@ exp2l:
 	fldt (%rsp)       # 2^rint(x)
 	fmulp
 	add $16,%rsp
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif

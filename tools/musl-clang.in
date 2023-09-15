@@ -1,15 +1,27 @@
-#!/bin/sh
+#!/bin/bash
+
+readonly SELF_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+if [ -f $SELF_DIR/wrapper_patch ]; then
+   source $SELF_DIR/wrapper_patch
+fi
+
 cc="@CC@"
 libc="@PREFIX@"
 libc_inc="@INCDIR@"
 libc_lib="@LIBDIR@"
+wrapper_flags="@CLANG_WRAPPER_FLAGS@ $c_wrapper_flags"
 thisdir="`cd "$(dirname "$0")"; pwd`"
+static_libgcc=
+linker=musl-clang
 
 # prevent clang from running the linker (and erroring) on no input.
 sflags=
 eflags=
 for x ; do
     case "$x" in
+        # -r indicates that the output is an ordinary relocatable object file and 
+        # thus we will not forward to the ld.musl-clang++ wrapper
+        -r) linker=lld ;;
         -l*) input=1 ;;
         *) input= ;;
     esac
@@ -22,12 +34,13 @@ done
 
 exec $cc \
     -B"$thisdir" \
-    -fuse-ld=musl-clang \
-    -static-libgcc \
+    -fuse-ld=$linker \
     -nostdinc \
+    -nostdlib \
     --sysroot "$libc" \
     -isystem "$libc_inc" \
     -L-user-start \
+    $wrapper_flags \
     $sflags \
     "$@" \
     $eflags \

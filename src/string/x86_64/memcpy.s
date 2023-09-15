@@ -2,8 +2,12 @@
 .global __memcpy_fwd
 .hidden __memcpy_fwd
 .type memcpy,@function
+.extern __x86_return_thunk
 memcpy:
 __memcpy_fwd:
+#ifdef __CET__
+	endbr64
+#endif
 	mov %rdi,%rax
 	cmp $8,%rdx
 	jc 1f
@@ -22,4 +26,9 @@ __memcpy_fwd:
 2:	movsb
 	dec %edx
 	jnz 2b
-1:	ret
+1:
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
+	ret
+#endif

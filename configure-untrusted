@@ -1,0 +1,9 @@
+#!/bin/sh
+PREFIX=$SANDBOX_HOME/x86_64-linux-musl-native-untrusted \
+LIBCXX=$SANDBOX_HOME/x86_64-linux-musl-native-untrusted \
+ALTBUILD=untrusted \
+DYNLOADER=$SANDBOX_HOME/x86_64-linux-musl-native-trusted/lib/ld-musl-x86_64.so.1 \
+CFLAGS="-sandbox -DUNTRUSTED -fcf-protection -mfunction-return=thunk-extern" \
+CLANG_WRAPPER_FLAGS=-sandbox \
+./configure-clang "$@"
+

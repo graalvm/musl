@@ -1,6 +1,9 @@
 .global memset
 .type memset,@function
 memset:
+#ifdef __CET__
+	endbr64
+#endif
 	movzbq %sil,%rax
 	mov $0x101010101010101,%r8
 	imul %r8,%rax
@@ -48,7 +51,11 @@ memset:
 	mov %rax,(-1-2-4-8-16-8)(%rdi,%rdx)
 
 1:	mov %rdi,%rax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 2:	test $15,%edi
 	mov %rdi,%r8
@@ -60,7 +67,11 @@ memset:
 	rep
 	stosq
 	mov %r8,%rax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 2:	xor %edx,%edx
 	sub %edi,%edx

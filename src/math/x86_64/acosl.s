@@ -3,6 +3,9 @@
 .global acosl
 .type acosl,@function
 acosl:
+#ifdef __CET__
+	endbr64
+#endif
 	fldt 8(%rsp)
 1:	fld %st(0)
 	fld1
@@ -13,4 +16,9 @@ acosl:
 	fabs
 	fxch %st(1)
 	fpatan
+.extern __x86_return_thunk
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
