@@ -23,6 +23,6 @@ LLVM_OBJCOPY=$LLVM_HOME/bin/llvm-objcopy \
 LLVM_AR=$LLVM_HOME/bin/llvm-ar \
 LLVM_RANLIB=$LLVM_HOME/bin/llvm-ranlib \
 LLVM_CONFIG=$LLVM_HOME/bin/llvm-config \
-LIBCC="-L$LLVM_HOME/../../llvm-runtimes-musl/amd64/usr/lib/linux -lclang_rt.builtins-x86_64" \
+LIBCC="$LLVM_HOME/../linux/libclang_rt.builtins-x86_64.a" \
 $SELF_DIR/configure --enable-wrapper=clang --target=x64_graalos --libcxxdir=$LIBCXX "$@"
 
