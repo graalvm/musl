@@ -187,11 +187,11 @@ obj/musl-gcc: config.mak
 	chmod +x $@
 
 obj/%-clang: $(srcdir)/tools/%-clang.in config.mak
-	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$$PREFIX_BASE$(prefix)!g' -e 's!@INCDIR@!$$PREFIX_BASE$(includedir)!g' -e 's!@LIBDIR@!$$PREFIX_BASE$(libdir)!g' -e 's!@LIBCXXDIR@!$$PREFIX_BASE$(libcxxdir)!g' -e 's!@LDSO@!$$PREFIX_BASE$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
+	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$${SELF_DIR}/..!g' -e 's!@INCDIR@!$${SELF_DIR}/../include!g' -e 's!@LIBDIR@!$${SELF_DIR}/../lib!g' -e 's!@LIBCXXDIR@!$${SELF_DIR}/..!g' -e 's!@LDSO@!$${SELF_DIR}/..$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
 	chmod +x $@
 
 obj/%-clang++: $(srcdir)/tools/%-clang++.in config.mak
-	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$$PREFIX_BASE$(prefix)!g' -e 's!@INCDIR@!$$PREFIX_BASE$(includedir)!g' -e 's!@LIBDIR@!$$PREFIX_BASE$(libdir)!g' -e 's!@LIBCXXDIR@!$$PREFIX_BASE$(libcxxdir)!g' -e 's!@LDSO@!$$PREFIX_BASE$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
+	sed -e 's!@CC@!$(WRAPCC_CLANG)!g' -e 's!@LD@!$(WRAPCC_LD)!g' -e 's!@PREFIX@!$${SELF_DIR}/..!g' -e 's!@INCDIR@!$${SELF_DIR}/../include!g' -e 's!@LIBDIR@!$${SELF_DIR}/../lib!g' -e 's!@LIBCXXDIR@!$${SELF_DIR}/..!g' -e 's!@LDSO@!$${SELF_DIR}/..$(DYNLOADER)!' -e 's!@CLANG_WRAPPER_FLAGS@!$(CLANG_WRAPPER_FLAGS)!' $< > $@
 	chmod +x $@
 
 $(DESTDIR)$(bindir)/%: obj/%

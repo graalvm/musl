@@ -50,6 +50,9 @@ for x ; do
             set -- "$@" -shared
             scrt=
             ;;
+        -static)
+            # static linking not supported by this wrapper script, ignore
+            ;;
         -sysroot=*|--sysroot=*)
             ;;
         *)
