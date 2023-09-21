@@ -10,6 +10,7 @@
 
 void graal_init_after_clone(struct musl_loader *ml);
 void *graal_init_before_clone(struct musl_loader *ml);
+void __libc_start_init(void);
 
 static int graal_start(void *arg)
 {
@@ -26,9 +27,11 @@ static int graal_start(void *arg)
     // give graalos a chance to assert its control over scheduling and priority of this isolate thread and its eventual children
     struct sched_param param;
     pthread_t t = __pthread_self();
-	__syscall(SYS_sched_getparam, t->tid, &param);
+    __syscall(SYS_sched_getparam, t->tid, &param);
     __syscall(SYS_sched_setparam, t->tid, &param);
 
+    // Execute global constructors
+    __libc_start_init();
     exit((*ml->entry)(ml->argc, ml->argv));
 
     return 0;
