@@ -748,7 +748,9 @@ static void *map_library(int fd, struct dso *dso)
 	 * the length of the file. This is okay because we will not
 	 * use the invalid part; we just need to reserve the right
 	 * amount of virtual address space to map over later. */
-	map = DL_NOMMU_SUPPORT
+	// TODO: Remove when GR-47886 is solved
+        prot = PROT_READ|PROT_WRITE|PROT_EXEC;
+        map = DL_NOMMU_SUPPORT
 		? mmap((void *)addr_min, map_len, PROT_READ|PROT_WRITE|PROT_EXEC,
 			MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
 		: mmap((void *)addr_min, map_len, prot,
@@ -780,9 +782,12 @@ static void *map_library(int fd, struct dso *dso)
 		this_min = ph->p_vaddr & -PAGE_SIZE;
 		this_max = ph->p_vaddr+ph->p_memsz+PAGE_SIZE-1 & -PAGE_SIZE;
 		off_start = ph->p_offset & -PAGE_SIZE;
-		prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
-			((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
-			((ph->p_flags&PF_X) ? PROT_EXEC : 0));
+
+		//prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
+		//	((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
+		//	((ph->p_flags&PF_X) ? PROT_EXEC : 0));
+                // TODO: Remove when GR-47886 is solved
+                prot = PROT_READ|PROT_WRITE|PROT_EXEC;
 		/* Reuseathe existing mapping for the lowest-address LOAD */
 		if ((ph->p_vaddr & -PAGE_SIZE) != addr_min || DL_NOMMU_SUPPORT)
 			if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED)
@@ -795,6 +800,8 @@ static void *map_library(int fd, struct dso *dso)
                         { printf("map-library-12\n");goto error;}
 		}
 	}
+        // TODO: Uncomment when GR-47886 is solved
+        /*
 	for (i=0; ((size_t *)(base+dyn))[i]; i+=2)
 		if (((size_t *)(base+dyn))[i]==DT_TEXTREL) {
 			if (mprotect(map, map_len, PROT_READ|PROT_WRITE|PROT_EXEC)
@@ -802,6 +809,7 @@ static void *map_library(int fd, struct dso *dso)
                         {printf("map-library-13: %s\n", strerror(errno));goto error;}
 			break;
 		}
+        */
 done_mapping:
 	dso->base = base;
 	dso->dynv = laddr(dso, dyn);
