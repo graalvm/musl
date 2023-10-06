@@ -1,7 +1,16 @@
+.global __x86_return_thunk
+
 .section .init
 	pop %rax
-	ret
-
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
+        ret
+#endif
 .section .fini
 	pop %rax
-	ret
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
+        ret
+#endif
