@@ -43,7 +43,6 @@ struct musl_loader {
     int library_fd;
 
     struct _dso loader_dso;
-    struct _dso library_dso;
 
     struct auxv_entry auxv[_AUX_CNT];
 

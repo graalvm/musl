@@ -2,8 +2,8 @@
 #define _GNU_SOURCE
 #define SYSCALL_NO_TLS 1
 #include <stdlib.h>
-#include <stdarg.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -43,6 +43,9 @@ static void error(const char *, ...);
 
 #define container_of(p,t,m) ((t*)((char *)(p)-offsetof(t,m)))
 #define countof(a) ((sizeof (a))/(sizeof (a)[0]))
+
+//#define DEBUG_DYLINK(...) dprintf(2, __VA_ARGS__)
+#define DEBUG_DYLINK(...)
 
 struct debug {
 	int ver;
@@ -629,8 +632,8 @@ static void unmap_library(struct dso *dso)
 
 static void *map_library(int fd, struct dso *dso)
 {
-	printf("map_library\n");
-        Ehdr buf[(896+sizeof(Ehdr))/sizeof(Ehdr)];
+	DEBUG_DYLINK("map_library\n");
+	Ehdr buf[(896+sizeof(Ehdr))/sizeof(Ehdr)];
 	void *allocated_buf=0;
 	size_t phsize;
 	size_t addr_min=SIZE_MAX, addr_max=0, map_len;
@@ -647,7 +650,7 @@ static void *map_library(int fd, struct dso *dso)
 
 	ssize_t l = read(fd, buf, sizeof buf);
 	eh = buf;
-	if (l<0) { printf("map-library-1\n"); return 0;}
+	if (l<0) { DEBUG_DYLINK("map-library-1\n"); return 0;}
 	if (l<sizeof *eh || (eh->e_type != ET_DYN && eh->e_type != ET_EXEC))
 		goto noexec;
 	phsize = eh->e_phentsize * eh->e_phnum;
@@ -655,13 +658,13 @@ static void *map_library(int fd, struct dso *dso)
 		allocated_buf = malloc(phsize);
 		if (!allocated_buf) return 0;
 		l = pread(fd, allocated_buf, phsize, eh->e_phoff);
-		if (l < 0) { printf("map-library-2\n"); goto error; }
-		if (l != phsize) { printf("map-library-3\n"); goto noexec; }
+		if (l < 0) { DEBUG_DYLINK("map-library-2\n"); goto error; }
+		if (l != phsize) { DEBUG_DYLINK("map-library-3\n"); goto noexec; }
 		ph = ph0 = allocated_buf;
 	} else if (eh->e_phoff + phsize > l) {
 		l = pread(fd, buf+1, phsize, eh->e_phoff);
-		if (l < 0) { printf("map-library-4\n"); goto error; }
-		if (l != phsize) { printf("map-library-5\n"); goto noexec; }
+		if (l < 0) { DEBUG_DYLINK("map-library-4\n"); goto error; }
+		if (l != phsize) { DEBUG_DYLINK("map-library-5\n"); goto noexec; }
 		ph = ph0 = (void *)(buf + 1);
 	} else {
 		ph = ph0 = (void *)((char *)buf + eh->e_phoff);
@@ -701,7 +704,7 @@ static void *map_library(int fd, struct dso *dso)
 	if (DL_FDPIC && !(eh->e_flags & FDPIC_CONSTDISP_FLAG)) {
 		dso->loadmap = calloc(1, sizeof *dso->loadmap
 			+ nsegs * sizeof *dso->loadmap->segs);
-		if (!dso->loadmap) { printf("map-library-6\n"); goto error; }
+		if (!dso->loadmap) { DEBUG_DYLINK("map-library-6\n"); goto error; }
 		dso->loadmap->nsegs = nsegs;
 		for (ph=ph0, i=0; i<nsegs; ph=(void *)((char *)ph+eh->e_phentsize)) {
 			if (ph->p_type != PT_LOAD) continue;
@@ -713,7 +716,7 @@ static void *map_library(int fd, struct dso *dso)
 				fd, ph->p_offset & -PAGE_SIZE);
 			if (map == MAP_FAILED) {
 				unmap_library(dso);
-                                printf("map-library-7\n");
+				DEBUG_DYLINK("map-library-7\n");
 				goto error;
 			}
 			dso->loadmap->segs[i].addr = (size_t)map +
@@ -730,8 +733,10 @@ static void *map_library(int fd, struct dso *dso)
 				if (pgend > pgbrk && mmap_fixed(map+pgbrk,
 					pgend-pgbrk, prot,
 					MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS,
-					-1, off_start) == MAP_FAILED)
-                                { printf("map-library-8\n"); goto error; }
+					-1, off_start) == MAP_FAILED) {
+					DEBUG_DYLINK("map-library-8\n");
+					goto error;
+				}
 				memset(map + brk, 0, pgbrk-brk);
 			}
 		}
@@ -748,26 +753,26 @@ static void *map_library(int fd, struct dso *dso)
 	 * the length of the file. This is okay because we will not
 	 * use the invalid part; we just need to reserve the right
 	 * amount of virtual address space to map over later. */
-	// TODO: Remove when GR-47886 is solved
-        prot = PROT_READ|PROT_WRITE|PROT_EXEC;
         map = DL_NOMMU_SUPPORT
 		? mmap((void *)addr_min, map_len, PROT_READ|PROT_WRITE|PROT_EXEC,
 			MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
 		: mmap((void *)addr_min, map_len, prot,
 			MAP_PRIVATE, fd, off_start);
-	if (map==MAP_FAILED) { printf("map-library-9\n"); goto error; }
+	if (map==MAP_FAILED) { DEBUG_DYLINK("map-library-9\n"); goto error; }
 	dso->map = map;
 	dso->map_len = map_len;
 	/* If the loaded file is not relocatable and the requested address is
 	 * not available, then the load operation must fail. */
 	if (eh->e_type != ET_DYN && addr_min && map!=(void *)addr_min) {
 		errno = EBUSY;
-                printf("map-library-10\n");
+		DEBUG_DYLINK("map-library-10\n");
 		goto error;
 	}
 	base = map - addr_min;
 	dso->phdr = 0;
 	dso->phnum = 0;
+	unsigned char* exec_base = NULL;
+	size_t exec_len = 0;
 	for (ph=ph0, i=eh->e_phnum; i; i--, ph=(void *)((char *)ph+eh->e_phentsize)) {
 		if (ph->p_type != PT_LOAD) continue;
 		/* Check if the programs headers are in this load segment, and
@@ -783,33 +788,61 @@ static void *map_library(int fd, struct dso *dso)
 		this_max = ph->p_vaddr+ph->p_memsz+PAGE_SIZE-1 & -PAGE_SIZE;
 		off_start = ph->p_offset & -PAGE_SIZE;
 
-		//prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
-		//	((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
-		//	((ph->p_flags&PF_X) ? PROT_EXEC : 0));
-                // TODO: Remove when GR-47886 is solved
-                prot = PROT_READ|PROT_WRITE|PROT_EXEC;
+		if (ph->p_flags&PF_X) {
+			if (exec_base != NULL) {
+				DEBUG_DYLINK("map-library-14\n");
+				goto error;
+			}
+			exec_base = base + this_min;
+			exec_len = this_max - this_min;
+		}
+
+		prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
+			((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
+			((ph->p_flags&PF_X) ? PROT_EXEC : 0));
 		/* Reuseathe existing mapping for the lowest-address LOAD */
 		if ((ph->p_vaddr & -PAGE_SIZE) != addr_min || DL_NOMMU_SUPPORT)
-			if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED)
-                        { printf("map-library-11\n");goto error; }
+			if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED) {
+				DEBUG_DYLINK("map-library-11\n");
+				goto error;
+			}
 		if (ph->p_memsz > ph->p_filesz && (ph->p_flags&PF_W)) {
 			size_t brk = (size_t)base+ph->p_vaddr+ph->p_filesz;
 			size_t pgbrk = brk+PAGE_SIZE-1 & -PAGE_SIZE;
 			memset((void *)brk, 0, pgbrk-brk & PAGE_SIZE-1);
-			if (pgbrk-(size_t)base < this_max && mmap_fixed((void *)pgbrk, (size_t)base+this_max-pgbrk, prot, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
-                        { printf("map-library-12\n");goto error;}
+			if (pgbrk-(size_t)base < this_max && mmap_fixed((void *)pgbrk, (size_t)base+this_max-pgbrk, prot, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED) {
+				DEBUG_DYLINK("map-library-12\n");
+				goto error;
+			}
 		}
 	}
-        // TODO: Uncomment when GR-47886 is solved
-        /*
+	if (exec_base == NULL) {
+		DEBUG_DYLINK("map-library-15\n");
+		goto error;
+	}
 	for (i=0; ((size_t *)(base+dyn))[i]; i+=2)
 		if (((size_t *)(base+dyn))[i]==DT_TEXTREL) {
-			if (mprotect(map, map_len, PROT_READ|PROT_WRITE|PROT_EXEC)
-			    && errno != ENOSYS)
-                        {printf("map-library-13: %s\n", strerror(errno));goto error;}
+			unsigned char* map_end = map + map_len;
+			unsigned char* exec_end = exec_base + exec_len;
+			DEBUG_DYLINK("map: %p map_len: %lx map_end: %p\n", (void*)map, map_len, (void*)map_end);
+			DEBUG_DYLINK("exec_base: %p exec_len: %lx exec_end: %p\n", (void*)exec_base, exec_len, (void*)exec_end);
+
+			if (map < exec_base) {
+				DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)map, exec_base - map);
+				if (mprotect(map, exec_base - map, PROT_READ|PROT_WRITE) && errno != ENOSYS) {
+					DEBUG_DYLINK("map-library-16: %s\n", strerror(errno));
+					goto error;
+				}
+			}
+			if (map_end > exec_end) {
+				DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)exec_end, map_end - exec_end);
+				if (mprotect(exec_end, map_end - exec_end, PROT_READ|PROT_WRITE) && errno != ENOSYS) {
+					DEBUG_DYLINK("map-library-17: %s\n", strerror(errno));
+					goto error;
+				}
+			}
 			break;
 		}
-        */
 done_mapping:
 	dso->base = base;
 	dso->dynv = laddr(dso, dyn);
@@ -818,9 +851,9 @@ done_mapping:
 	return map;
 noexec:
 	errno = ENOEXEC;
-        printf("map_library noexec\n");
+	DEBUG_DYLINK("map_library noexec\n");
 error:
-        printf("map_library error\n");
+	DEBUG_DYLINK("Not a valid dynamic program\n");
 	if (map!=MAP_FAILED) unmap_library(dso);
 	free(allocated_buf);
 	return 0;
@@ -1019,12 +1052,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	size_t alloc_size;
 	int n_th = 0;
 	int is_self = 0;
-        const char *file = name;
+	const char *file = name;
 
-        printf("load_library-0 file=%s\n", file);fflush(stdout);
+	DEBUG_DYLINK("load_library-0 file=%s\n", file);
 	if (!*name) {
 		errno = EINVAL;
-                printf("load_library-1 file=%s\n", file);fflush(stdout);
+		DEBUG_DYLINK("load_library-1 file=%s\n", file);
 		return 0;
 	}
 
@@ -1066,7 +1099,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			ldso.prev = tail;
 			tail = &ldso;
 		}
-                printf("load_library-2 file=%s\n", file);fflush(stdout);
+		DEBUG_DYLINK("load_library-2 file=%s\n", file);
 		return &ldso;
 	}
 	if (strchr(name, '/')) {
@@ -1076,14 +1109,14 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		/* Search for the name to see if it's already loaded */
 		for (p=head->next; p; p=p->next) {
 			if (p->shortname && !strcmp(p->shortname, name)) {
-                                printf("load_library-2-0 file=%s\n", file);fflush(stdout);
+				DEBUG_DYLINK("load_library-2-0 file=%s\n", file);
 				return p;
 			}
 		}
 		if (strlen(name) > NAME_MAX) {
-                    printf("load_library-2-1 file=%s\n", file);fflush(stdout);
-                    return 0;
-                }
+			DEBUG_DYLINK("load_library-2-1 file=%s\n", file);
+			return 0;
+		}
 		fd = -1;
 		if (env_path) fd = path_open(name, env_path, buf, sizeof buf);
 		for (p=needed_by; fd == -1 && p; p=p->needed_by) {
@@ -1134,12 +1167,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		pathname = buf;
 	}
 	if (fd < 0) {
-            printf("load_library-3 file=%s\n", file);fflush(stdout);
-            return 0;
-        }
+		DEBUG_DYLINK("load_library-3 file=%s\n", file);
+		return 0;
+	}
 	if (fstat(fd, &st) < 0) {
 		close(fd);
-                printf("load_library-3-0 file=%s\n", file);fflush(stdout);
+		DEBUG_DYLINK("load_library-3-0 file=%s\n", file);
 		return 0;
 	}
 #ifdef GRAALOS
@@ -1153,16 +1186,16 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
                             if (!p->shortname && pathname != name)
                                     p->shortname = strrchr(p->name, '/')+1;
                             close(fd);
-                            printf("load_library-4 file=%s\n", file);fflush(stdout);
+                            DEBUG_DYLINK("load_library-4 file=%s\n", file);
                             return p;
                     }
             }
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) {
-            printf("load_library-5 file=%s\n", file);fflush(stdout);
-            return 0;
-        }
+		DEBUG_DYLINK("load_library-5 file=%s\n", file);
+		return 0;
+	}
 
 	/* Avoid the danger of getting two versions of libc mapped into the
 	 * same process when an absolute pathname was used. The symbols
@@ -1172,7 +1205,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
 		unmap_library(&temp_dso);
-                printf("load_library-6 file=%s\n", file);fflush(stdout);
+		DEBUG_DYLINK("load_library-6 file=%s\n", file);
 		return load_library("libc.so", needed_by);
 	}
 	/* Past this point, if we haven't reached runtime yet, ldso has
@@ -1196,7 +1229,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	p = calloc(1, alloc_size);
 	if (!p) {
 		unmap_library(&temp_dso);
-                printf("load_library-7 file=%s\n", file);fflush(stdout);
+		DEBUG_DYLINK("load_library-7 file=%s\n", file);
 		return 0;
 	}
 	memcpy(p, &temp_dso, sizeof temp_dso);
@@ -1237,7 +1270,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 
 	if (ldd_mode) dprintf(1, "\t%s => %s (%p)\n", name, pathname, p->base);
 
-        printf("load_library-8 file=%s\n", file);fflush(stdout);
+	DEBUG_DYLINK("load_library-8 file=%s\n", file);
 	return p;
 }
 
@@ -1765,15 +1798,16 @@ void graal_init_after_clone(struct musl_loader *ml)
             || aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
 
     int fd;
-    char *appname = ml->library_dso.name;
+    char *appname = "/app.so";
     fd = open(appname, O_RDONLY);
     if (fd < 0) {
         dprintf(2, "%s: cannot load %s: %s\n", ldso.name, appname, strerror(errno));
         _exit(1);
     }
+    DEBUG_DYLINK("map_library %s\n", appname);
     ehdr = map_library(fd, &app);
     if (!ehdr) {
-        dprintf(2, "%s: %s: Not a valid dynamic program\n", ldso.name, appname);
+        dprintf(2, "%s: %s: Not a valid dynamic program1\n", ldso.name, appname);
         _exit(1);
     }
     close(fd);
@@ -1782,10 +1816,14 @@ void graal_init_after_clone(struct musl_loader *ml)
     //aux[AT_ENTRY] = (size_t)laddr(&app, ehdr->e_entry);
     Elf64_Sym *entry_sym = find_symbol(&app, ml->entry_name);
     if (!entry_sym) {
-        dprintf(2, "Entry symbol not found: %s", ml->entry_name);
-        _exit(1);
+        entry_sym = find_symbol(&app, "main");
+        if (!entry_sym) {
+            dprintf(2, "Entry symbol not found: '%s' (or 'main')", ml->entry_name);
+            _exit(1);
+        }
     }
-    ml->entry = app.base + entry_sym->st_value;
+
+    ml->entry = (void*) (app.base + entry_sym->st_value);
 
     head = &app;
     head->next = &ldso;
@@ -1816,8 +1854,7 @@ void graal_init_after_clone(struct musl_loader *ml)
     if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
         initial_tls = calloc(libc.tls_size, 1);
         if (!initial_tls) {
-            dprintf(2, "Error getting %zu bytes thread-local storage: %m\n",
-                    libc.tls_size);
+            dprintf(2, "Error getting %zu bytes thread-local storage: %m\n", libc.tls_size);
             _exit(127);
         }
     }
@@ -2074,9 +2111,10 @@ void __dls3(size_t *sp, size_t *auxv)
 			dprintf(2, "%s: cannot load %s: %s\n", ldname, argv[0], strerror(errno));
 			_exit(1);
 		}
+        printf("foo2\n");
 		Ehdr *ehdr = map_library(fd, &app);
 		if (!ehdr) {
-			dprintf(2, "%s: %s: Not a valid dynamic program\n", ldname, argv[0]);
+			dprintf(2, "%s: %s: Not a valid dynamic program2\n", ldname, argv[0]);
 			_exit(1);
 		}
 		close(fd);
@@ -2275,12 +2313,10 @@ void *dlopen(const char *file, int mode)
 	jmp_buf jb;
 	struct dso **volatile ctor_queue = 0;
 
-        printf("DLOPEN-1\nDLOPEN-1-1\n");
-        printf("DLOPEN-1-2\n");
-        fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-1\n");
 
 	if (!file) return head;
-        printf("DLOPEN-1-3\n");fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-1-3\n");
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	pthread_rwlock_wrlock(&lock);
@@ -2289,7 +2325,7 @@ void *dlopen(const char *file, int mode)
 	debug.state = RT_ADD;
 	_dl_debug_state();
 
-        printf("DLOPEN-2\n");fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-2\n");
 	p = 0;
 	if (shutting_down) {
 		error("Cannot dlopen while program is exiting.");
@@ -2336,7 +2372,7 @@ void *dlopen(const char *file, int mode)
 		p = 0;
 		goto end;
 	} else p = load_library(file, head);
-        printf("DLOPEN-2-1 file=%s p=%p\n", file, p);fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-2-1 file=%s p=%p\n", file, p);
 	if (!p) {
 		error(noload ?
 			"Library %s is not already loaded" :
@@ -2346,10 +2382,10 @@ void *dlopen(const char *file, int mode)
 	}
 
 	/* First load handling */
-        printf("DLOPEN-3\n");fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-3\n");
 	load_deps(p);
 	extend_bfs_deps(p);
-        printf("DLOPEN-4\n");fflush(stdout);
+	DEBUG_DYLINK("DLOPEN-4\n");
 	pthread_mutex_lock(&init_fini_lock);
 	int constructed = p->constructed;
 	pthread_mutex_unlock(&init_fini_lock);
