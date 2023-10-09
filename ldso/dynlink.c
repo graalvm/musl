@@ -753,7 +753,7 @@ static void *map_library(int fd, struct dso *dso)
 	 * the length of the file. This is okay because we will not
 	 * use the invalid part; we just need to reserve the right
 	 * amount of virtual address space to map over later. */
-        map = DL_NOMMU_SUPPORT
+	map = DL_NOMMU_SUPPORT
 		? mmap((void *)addr_min, map_len, PROT_READ|PROT_WRITE|PROT_EXEC,
 			MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
 		: mmap((void *)addr_min, map_len, prot,
@@ -800,7 +800,7 @@ static void *map_library(int fd, struct dso *dso)
 		prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
 			((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
 			((ph->p_flags&PF_X) ? PROT_EXEC : 0));
-		/* Reuseathe existing mapping for the lowest-address LOAD */
+		/* Reuse the existing mapping for the lowest-address LOAD */
 		if ((ph->p_vaddr & -PAGE_SIZE) != addr_min || DL_NOMMU_SUPPORT)
 			if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED) {
 				DEBUG_DYLINK("map-library-11\n");
@@ -1052,12 +1052,11 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	size_t alloc_size;
 	int n_th = 0;
 	int is_self = 0;
-	const char *file = name;
 
-	DEBUG_DYLINK("load_library-0 file=%s\n", file);
+	DEBUG_DYLINK("load_library-0 file=%s\n", name);
 	if (!*name) {
 		errno = EINVAL;
-		DEBUG_DYLINK("load_library-1 file=%s\n", file);
+		DEBUG_DYLINK("load_library-1 file=%s\n", name);
 		return 0;
 	}
 
@@ -1099,7 +1098,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			ldso.prev = tail;
 			tail = &ldso;
 		}
-		DEBUG_DYLINK("load_library-2 file=%s\n", file);
+		DEBUG_DYLINK("load_library-2 file=%s\n", name);
 		return &ldso;
 	}
 	if (strchr(name, '/')) {
@@ -1109,12 +1108,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		/* Search for the name to see if it's already loaded */
 		for (p=head->next; p; p=p->next) {
 			if (p->shortname && !strcmp(p->shortname, name)) {
-				DEBUG_DYLINK("load_library-2-0 file=%s\n", file);
+				DEBUG_DYLINK("load_library-2-0 file=%s\n", name);
 				return p;
 			}
 		}
 		if (strlen(name) > NAME_MAX) {
-			DEBUG_DYLINK("load_library-2-1 file=%s\n", file);
+			DEBUG_DYLINK("load_library-2-1 file=%s\n", name);
 			return 0;
 		}
 		fd = -1;
@@ -1186,14 +1185,14 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
                             if (!p->shortname && pathname != name)
                                     p->shortname = strrchr(p->name, '/')+1;
                             close(fd);
-                            DEBUG_DYLINK("load_library-4 file=%s\n", file);
+                            DEBUG_DYLINK("load_library-4 file=%s\n", name);
                             return p;
                     }
             }
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) {
-		DEBUG_DYLINK("load_library-5 file=%s\n", file);
+		DEBUG_DYLINK("load_library-5 file=%s\n", name);
 		return 0;
 	}
 
@@ -1205,7 +1204,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
 		unmap_library(&temp_dso);
-		DEBUG_DYLINK("load_library-6 file=%s\n", file);
+		DEBUG_DYLINK("load_library-6 file=%s\n", name);
 		return load_library("libc.so", needed_by);
 	}
 	/* Past this point, if we haven't reached runtime yet, ldso has
@@ -1229,7 +1228,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	p = calloc(1, alloc_size);
 	if (!p) {
 		unmap_library(&temp_dso);
-		DEBUG_DYLINK("load_library-7 file=%s\n", file);
+		DEBUG_DYLINK("load_library-7 file=%s\n", name);
 		return 0;
 	}
 	memcpy(p, &temp_dso, sizeof temp_dso);
@@ -1270,7 +1269,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 
 	if (ldd_mode) dprintf(1, "\t%s => %s (%p)\n", name, pathname, p->base);
 
-	DEBUG_DYLINK("load_library-8 file=%s\n", file);
+	DEBUG_DYLINK("load_library-8 file=%s\n", name);
 	return p;
 }
 
@@ -1593,6 +1592,7 @@ static void do_init_fini(struct dso **queue)
 	struct dso *p;
 	size_t dyn[DYN_CNT], i;
 	pthread_t self = __pthread_self();
+
 	pthread_mutex_lock(&init_fini_lock);
 	for (i=0; (p=queue[i]); i++) {
 		while ((p->ctor_visitor && p->ctor_visitor!=self) || shutting_down)
@@ -1719,7 +1719,7 @@ void *graal_init_before_clone(struct musl_loader *ml)
 	libc.tls_align = tls_align;
     libc.can_do_threads = 1;
 
-    self = __copy_tls((void *)builtin_tls);
+	self = __copy_tls((void *)builtin_tls);
 
     self->stack = ml->stack;
     self->stack_size = ml->stack_size;
@@ -1777,25 +1777,25 @@ void graal_init_after_clone(struct musl_loader *ml)
 
     ldso.base = ml->loader_dso.base;
 
-    Ehdr *ehdr = (void *)ldso.base;
-    ldso.name = ldso.shortname = ml->loader_dso.name;
-    ldso.phnum = ehdr->e_phnum;
-    ldso.phdr = laddr(&ldso, ehdr->e_phoff);
-    ldso.phentsize = ehdr->e_phentsize;
-    kernel_mapped_dso(&ldso);
+	Ehdr *ehdr = (void *)ldso.base;
+	ldso.name = ldso.shortname = ml->loader_dso.name;
+	ldso.phnum = ehdr->e_phnum;
+	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
+	ldso.phentsize = ehdr->e_phentsize;
+	kernel_mapped_dso(&ldso);
 
-    decode_dyn(&ldso);
+	decode_dyn(&ldso);
 
-    head = &ldso;
-    reloc_all(&ldso);
+	head = &ldso;
+	reloc_all(&ldso);
 
-    ldso.relocated = 0;
+	ldso.relocated = 0;
 
-    search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
-    __pthread_self()->sysinfo = __sysinfo;
-    libc.page_size = aux[AT_PAGESZ];
-    libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
-            || aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
+	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
+	__pthread_self()->sysinfo = __sysinfo;
+	libc.page_size = aux[AT_PAGESZ];
+	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
+			|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
 
     int fd;
     char *appname = "/app.so";
@@ -1830,78 +1830,78 @@ void graal_init_after_clone(struct musl_loader *ml)
     tail = &ldso;
     syms_tail = &app;
 
-    for (struct dso *p=head; p; p=p->next)
-        add_syms(p);
+	for (struct dso *p=head; p; p=p->next)
+		add_syms(p);
 
-    if (app.tls.size) {
-        libc.tls_head = tls_tail = &app.tls;
-        app.tls_id = tls_cnt = 1;
+	if (app.tls.size) {
+		libc.tls_head = tls_tail = &app.tls;
+		app.tls_id = tls_cnt = 1;
 #ifdef TLS_ABOVE_TP
-        app.tls.offset = GAP_ABOVE_TP;
-        app.tls.offset += (-GAP_ABOVE_TP + (uintptr_t)app.tls.image)
-            & (app.tls.align-1);
-        tls_offset = app.tls.offset + app.tls.size;
+		app.tls.offset = GAP_ABOVE_TP;
+		app.tls.offset += (-GAP_ABOVE_TP + (uintptr_t)app.tls.image)
+			& (app.tls.align-1);
+		tls_offset = app.tls.offset + app.tls.size;
 #else
-        tls_offset = app.tls.offset = app.tls.size
-            + ( -((uintptr_t)app.tls.image + app.tls.size)
-                    & (app.tls.align-1) );
+		tls_offset = app.tls.offset = app.tls.size
+			+ ( -((uintptr_t)app.tls.image + app.tls.size)
+			& (app.tls.align-1) );
 #endif
-        tls_align = MAXP2(tls_align, app.tls.align);
-    }
+		tls_align = MAXP2(tls_align, app.tls.align);
+	}
 
-    update_tls_size();
-    void *initial_tls = builtin_tls;
-    if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
-        initial_tls = calloc(libc.tls_size, 1);
-        if (!initial_tls) {
-            dprintf(2, "Error getting %zu bytes thread-local storage: %m\n", libc.tls_size);
-            _exit(127);
-        }
-    }
-    static_tls_cnt = tls_cnt;
+	update_tls_size();
+	void *initial_tls = builtin_tls;
+	if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
+		initial_tls = calloc(libc.tls_size, 1);
+		if (!initial_tls) {
+			dprintf(2, "Error getting %zu bytes thread-local storage: %m\n", libc.tls_size);
+			_exit(127);
+		}
+	}
+	static_tls_cnt = tls_cnt;
 
-    if (initial_tls != builtin_tls) {
-        if (__init_tp(__copy_tls(initial_tls)) < 0) {
-            a_crash();
-        } else {
-            /* Reinitialize variables in self
-             * because we created a new self to
-             * accommodate the tls size. */
-            pthread_t self = __pthread_self();
-            self->stack = ml->stack;
-            self->stack_size = ml->stack_size;
-            self->locale = &libc.global_locale;
+	if (initial_tls != builtin_tls) {
+		if (__init_tp(__copy_tls(initial_tls)) < 0) {
+			a_crash();
+		} else {
+			/* Reinitialize variables in self
+			 * because we created a new self to
+			 * accommodate the tls size. */
+			pthread_t self = __pthread_self();
+			self->stack = ml->stack;
+			self->stack_size = ml->stack_size;
+			self->locale = &libc.global_locale;
 
-            self->syscall = ml->syscall_handler;
-            self->self = self;
-            self->next = self->prev = self;
-        }
+			self->syscall = ml->syscall_handler;
+			self->self = self;
+			self->next = self->prev = self;
+		}
 
-    } else {
-        size_t tmp_tls_size = libc.tls_size;
-        pthread_t self = __pthread_self();
-        /* Temporarily set the tls size to the full size of
-         * builtin_tls so that __copy_tls will use the same layout
-         * as it did for before. Then check, just to be safe. */
-        libc.tls_size = sizeof builtin_tls;
-        if (__copy_tls((void*)builtin_tls) != self) a_crash();
-        libc.tls_size = tmp_tls_size;
-    }
+	} else {
+		size_t tmp_tls_size = libc.tls_size;
+		pthread_t self = __pthread_self();
+		/* Temporarily set the tls size to the full size of
+		 * builtin_tls so that __copy_tls will use the same layout
+		 * as it did for before. Then check, just to be safe. */
+		libc.tls_size = sizeof builtin_tls;
+		if (__copy_tls((void*)builtin_tls) != self) a_crash();
+		libc.tls_size = tmp_tls_size;
+	}
 
-    /* Initial dso chain consists only of the app. */
-    head = tail = syms_tail = &app;
+	/* Initial dso chain consists only of the app. */
+	head = tail = syms_tail = &app;
 
-    ldso.deps = (struct dso **)no_deps;
-    load_deps(&app);
-    for (struct dso *p=head; p; p=p->next)
-        add_syms(p);
+	ldso.deps = (struct dso **)no_deps;
+	load_deps(&app);
+	for (struct dso *p=head; p; p=p->next)
+		add_syms(p);
 
-    main_ctor_queue = queue_ctors(&app);
+	main_ctor_queue = queue_ctors(&app);
 
-    /* The main program must be relocated LAST since it may contain
-     * copy relocations which depend on libraries' relocations. */
-    reloc_all(app.next);
-    reloc_all(&app);
+	/* The main program must be relocated LAST since it may contain
+	 * copy relocations which depend on libraries' relocations. */
+	reloc_all(app.next);
+	reloc_all(&app);
 
     runtime = 1;
 }
@@ -2114,7 +2114,7 @@ void __dls3(size_t *sp, size_t *auxv)
         printf("foo2\n");
 		Ehdr *ehdr = map_library(fd, &app);
 		if (!ehdr) {
-			dprintf(2, "%s: %s: Not a valid dynamic program2\n", ldname, argv[0]);
+			dprintf(2, "%s: %s: Not a valid dynamic program\n", ldname, argv[0]);
 			_exit(1);
 		}
 		close(fd);
