@@ -1166,12 +1166,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		pathname = buf;
 	}
 	if (fd < 0) {
-		DEBUG_DYLINK("load_library-3 file=%s\n", file);
+		DEBUG_DYLINK("load_library-3 file=%s\n", name);
 		return 0;
 	}
 	if (fstat(fd, &st) < 0) {
 		close(fd);
-		DEBUG_DYLINK("load_library-3-0 file=%s\n", file);
+		DEBUG_DYLINK("load_library-3-0 file=%s\n", name);
 		return 0;
 	}
 #ifdef GRAALOS
@@ -1902,6 +1902,8 @@ void graal_init_after_clone(struct musl_loader *ml)
 	 * copy relocations which depend on libraries' relocations. */
 	reloc_all(app.next);
 	reloc_all(&app);
+
+        DEBUG_DYLINK("graalos loader: app successfully loaded\n");
 
     runtime = 1;
 }
