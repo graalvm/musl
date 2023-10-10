@@ -1,7 +1,7 @@
 .section .init
 .global _init
 _init:
-#ifdef UNTRUSTED
+#ifdef __CET__
         endbr64
 #endif
 	push %rax
@@ -9,7 +9,7 @@ _init:
 .section .fini
 .global _fini
 _fini:
-#ifdef UNTRUSTED
+#ifdef __CET__
         endbr64
 #endif
 	push %rax
