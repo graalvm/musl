@@ -139,7 +139,7 @@ CC_CMD = $(CC) $(CFLAGS_ALL) -c -o $@ $<
 ifeq ($(ADD_CFI),yes)
 	AS_CMD = LC_ALL=C awk -f $(srcdir)/tools/add-cfi.common.awk -f $(srcdir)/tools/add-cfi.$(ARCH).awk $< | $(CC) $(CFLAGS_ALL) -x assembler -c -o $@ -
 else
-	AS_CMD = $(CC) $(CFLAGS_ALL) -x assembler-with-cpp -c -o $@ $<
+	AS_CMD = $(CC_CMD)
 endif
 
 obj/%.o: $(srcdir)/%.s
