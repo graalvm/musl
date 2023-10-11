@@ -55,9 +55,6 @@ for x ; do
             # do not link the start CRT object for a shared lib
             scrt=
             ;;
-        -static)
-            # static linking not supported by this wrapper script, ignore
-            ;;
         -sysroot=*|--sysroot=*)
             ;;
         *)

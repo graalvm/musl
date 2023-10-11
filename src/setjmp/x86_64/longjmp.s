@@ -6,7 +6,7 @@
 _longjmp:
 longjmp:
 #ifdef __CET__
-        endbr64
+	endbr64
 #endif
 	xor %eax,%eax
 	cmp $1,%esi             /* CF = val ? 0 : 1 */
@@ -18,4 +18,17 @@ longjmp:
 	mov 32(%rdi),%r14
 	mov 40(%rdi),%r15
 	mov 48(%rdi),%rsp
+#ifdef __CET__
+	/* target check for software CFI: */
+	mov 56(%rdi),%rcx
+
+    mov     (%rcx),%ebx
+    add     $0x05e1f00d,%ebx
+    jne     trap
+    lfence
+    jmpq    *%rcx           /* goto saved address without altering rsp */
+trap:
+    int3
+#else
 	jmp *56(%rdi)           /* goto saved address without altering rsp */
+#endif

@@ -9,7 +9,7 @@ __setjmp:
 _setjmp:
 setjmp:
 #ifdef __CET__
-        endbr64
+	endbr64
 #endif
 	mov %rbx,(%rdi)         /* rdi is jmp_buf, move registers onto it */
 	mov %rbp,8(%rdi)
@@ -22,4 +22,9 @@ setjmp:
 	mov (%rsp),%rdx         /* save return addr ptr for new rip */
 	mov %rdx,56(%rdi)
 	xor %eax,%eax           /* always return 0 */
+.extern __x86_return_thunk
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif

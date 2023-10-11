@@ -2,7 +2,7 @@
 .type vfork,@function
 vfork:
 #ifdef __CET__
-        endbr64
+	endbr64
 #endif
 	pop %rdx
 	mov $58,%eax
