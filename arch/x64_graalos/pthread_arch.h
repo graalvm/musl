@@ -6,4 +6,3 @@ static inline uintptr_t __get_tp()
 }
 
 #define MC_PC gregs[REG_RIP]
-#define PER_THREAD_SYSCALL 1

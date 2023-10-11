@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 #define SYSCALL_NO_TLS 1
 #include <stdlib.h>
@@ -23,8 +24,12 @@
 #include "fork_impl.h"
 #include "libc.h"
 #include "dynlink.h"
-#include "../src/graalos/graal_syscall.h"
-#include "../src/graalos/musl_loader.h"
+#include "syscall.h"
+
+#ifdef GRAALOS
+#include "../src/internal/x64_graalos/graal_syscall.h"
+#include "../src/internal/x64_graalos/musl_loader.h"
+#endif // GRAALOS
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -1033,7 +1038,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			is_self = 1;
 		}
 	}
+#ifdef GRAALOS
 	if (ldso.name && !strcmp(name, ldso.name)) is_self = 1;
+#else // GRAALOS
+	if (!strcmp(name, ldso.name)) is_self = 1;
+#endif // GRAALOS
+
 	if (is_self) {
 		if (!ldso.prev) {
 			tail->next = &ldso;
@@ -1107,7 +1117,9 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		close(fd);
 		return 0;
 	}
-        if (head) {
+#ifdef GRAALOS
+        if (head)
+#endif // GRAALOS
             for (p=head->next; p; p=p->next) {
                     if (p->dev == st.st_dev && p->ino == st.st_ino) {
                             /* If this library was previously loaded with a
@@ -1119,7 +1131,6 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
                             return p;
                     }
             }
-        }
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) return 0;
@@ -1634,6 +1645,7 @@ static void install_new_tls(void)
 	__restore_sigs(&set);
 }
 
+#ifdef GRAALOS
 void *graal_init_before_clone(struct musl_loader *ml)
 {
     struct pthread *self;
@@ -1769,7 +1781,7 @@ void graal_init_after_clone(struct musl_loader *ml)
 	reloc_all(&app);
     runtime = 1;
 }
-
+#endif // GRAALOS
 
 
 /* Stage 1 of the dynamic linker is defined in dlstart.c. It calls the

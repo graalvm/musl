@@ -35,9 +35,9 @@ struct pthread {
 	int tid;
 	int errno_val;
 
-#ifdef PER_THREAD_SYSCALL
+#ifdef GRAALOS
     long (*syscall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
-#endif /* PER_THREAD_SYSCALL */
+#endif // GRAALOS
 
 	volatile int detach_state;
 	volatile int cancel;

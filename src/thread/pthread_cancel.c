@@ -30,16 +30,16 @@ long __syscall_cp_c(syscall_arg_t nr,
 	    && (st==PTHREAD_CANCEL_DISABLE || nr==SYS_close))
 		return __syscall(nr, u, v, w, x, y, z);
 
-#ifndef NO_CANCEL_POINT
+#ifndef GRAALOS
 	r = __syscall_cp_asm(&self->cancel, nr, u, v, w, x, y, z);
 	if (r==-EINTR && nr!=SYS_close && self->cancel &&
 	    self->canceldisable != PTHREAD_CANCEL_DISABLE)
 		r = __cancel();
 	return r;
-#else /* NO_CANCEL_POINT */
+#else // GRAALOS
         return __syscall(nr, u, v, w, x, y, z);
 
-#endif /* NO_CANCEL_POINT */
+#endif // GRAALOS
 }
 
 static void _sigaddset(sigset_t *set, int sig)
@@ -48,9 +48,9 @@ static void _sigaddset(sigset_t *set, int sig)
 	set->__bits[s/8/sizeof *set->__bits] |= 1UL<<(s&8*sizeof *set->__bits-1);
 }
 
-#ifndef NO_CANCEL_POINT
+#ifndef GRAALOS
 extern hidden const char __cp_begin[1], __cp_end[1], __cp_cancel[1];
-#endif /* NO_CANCEL_POINT */
+#endif // GRAALOS
 
 static void cancel_handler(int sig, siginfo_t *si, void *ctx)
 {
@@ -63,7 +63,7 @@ static void cancel_handler(int sig, siginfo_t *si, void *ctx)
 
 	_sigaddset(&uc->uc_sigmask, SIGCANCEL);
 
-#ifndef NO_CANCEL_POINT
+#ifndef GRAALOS
 
 	if (self->cancelasync || pc >= (uintptr_t)__cp_begin && pc < (uintptr_t)__cp_end) {
 		uc->uc_mcontext.MC_PC = (uintptr_t)__cp_cancel;
@@ -72,7 +72,7 @@ static void cancel_handler(int sig, siginfo_t *si, void *ctx)
 #endif
 		return;
 	}
-#endif
+#endif // GRAALOS
 
 	__syscall(SYS_tkill, self->tid, SIGCANCEL);
 }
