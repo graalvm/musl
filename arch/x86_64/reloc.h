@@ -11,21 +11,8 @@
 #define REL_TPOFF       R_X86_64_TPOFF64
 #define REL_TLSDESC     R_X86_64_TLSDESC
 
-#ifdef __CET__
-#define CRTJMP(pc,sp) __asm__ __volatile__( \
-    " mov %1,%%rsp ;" \
-    " mov (%0), %%ecx ;" \
-    " add $0x05E1F00D, %%ecx ;" \
-    " jnz wrong_target%= ;" \
-    " lfence ;" \
-    " jmp *%0 ;" \
-    " wrong_target%=: ;" \
-    " int3 ;" \
-    : : "r"(pc), "r"(sp) : "rcx", "memory" )
-#else
 #define CRTJMP(pc,sp) __asm__ __volatile__( \
    "mov %1,%%rsp ; jmp *%0" : : "r"(pc), "r"(sp) : "memory" )
-#endif
 
 #define GETFUNCSYM(fp, sym, got) __asm__ ( \
 	".hidden " #sym "\n" \
