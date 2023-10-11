@@ -4,6 +4,9 @@
 .type __sigsetjmp,@function
 sigsetjmp:
 __sigsetjmp:
+#ifdef __CET__
+	endbr64
+#endif
 	test %esi,%esi
 	jz 1f
 
