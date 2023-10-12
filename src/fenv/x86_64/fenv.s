@@ -1,9 +1,10 @@
 .global feclearexcept
 .type feclearexcept,@function
+.extern __x86_return_thunk
 feclearexcept:
-		# maintain exceptions in the sse mxcsr, clear x87 exceptions
+		// maintain exceptions in the sse mxcsr, clear x87 exceptions
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	mov %edi,%ecx
 	and $0x3f,%ecx
@@ -20,28 +21,36 @@ feclearexcept:
 	and %ecx,-8(%rsp)
 	ldmxcsr -8(%rsp)
 1:	xor %eax,%eax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global feraiseexcept
 .type feraiseexcept,@function
 feraiseexcept:
 
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	and $0x3f,%edi
 	stmxcsr -8(%rsp)
 	or %edi,-8(%rsp)
 	ldmxcsr -8(%rsp)
 	xor %eax,%eax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global __fesetround
 .hidden __fesetround
 .type __fesetround,@function
 __fesetround:
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	push %rax
 	xor %eax,%eax
@@ -56,44 +65,60 @@ __fesetround:
 	or %ch,1(%rsp)
 	ldmxcsr (%rsp)
 	pop %rcx
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global fegetround
 .type fegetround,@function
 fegetround:
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	push %rax
 	stmxcsr (%rsp)
 	pop %rax
 	shr $3,%eax
 	and $0xc00,%eax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global fegetenv
 .type fegetenv,@function
 fegetenv:
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	xor %eax,%eax
 	fnstenv (%rdi)
 	stmxcsr 28(%rdi)
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global fesetenv
 .type fesetenv,@function
 fesetenv:
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	xor %eax,%eax
 	inc %rdi
 	jz 1f
 	fldenv -1(%rdi)
 	ldmxcsr 27(%rdi)
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 1:	push %rax
 	push %rax
 	pushq $0xffff
@@ -102,13 +127,17 @@ fesetenv:
 	pushq $0x1f80
 	ldmxcsr (%rsp)
 	add $40,%rsp
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif
 
 .global fetestexcept
 .type fetestexcept,@function
 fetestexcept:
 #ifdef __CET__
-         endbr64
+	endbr64
 #endif
 	and $0x3f,%edi
 	push %rax
@@ -117,4 +146,8 @@ fetestexcept:
 	fnstsw %ax
 	or %esi,%eax
 	and %edi,%eax
+#ifdef __CET__
+	jmp __x86_return_thunk
+#else
 	ret
+#endif

@@ -137,9 +137,9 @@ CC_CMD = $(CC) $(CFLAGS_ALL) -c -o $@ $<
 
 # Choose invocation of assembler to be used
 ifeq ($(ADD_CFI),yes)
-	AS_CMD = LC_ALL=C awk -f $(srcdir)/tools/add-cfi.common.awk -f $(srcdir)/tools/add-cfi.$(ARCH).awk $< | $(CC) $(CFLAGS_ALL) -x assembler -c -o $@ -
+	AS_CMD = LC_ALL=C awk -f $(srcdir)/tools/add-cfi.common.awk -f $(srcdir)/tools/add-cfi.$(ARCH).awk $< | $(CC) $(CFLAGS_ALL) -x assembler -x assembler-with-cpp -c -o $@ -
 else
-	AS_CMD = $(CC_CMD)
+	AS_CMD = $(CC) $(CFLAGS_ALL) -c -x assembler-with-cpp -o $@ $<
 endif
 
 obj/%.o: $(srcdir)/%.s

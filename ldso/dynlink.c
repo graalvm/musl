@@ -1,3 +1,4 @@
+
 #define _GNU_SOURCE
 #define SYSCALL_NO_TLS 1
 #include <stdlib.h>
@@ -23,6 +24,12 @@
 #include "fork_impl.h"
 #include "libc.h"
 #include "dynlink.h"
+#include "syscall.h"
+
+#ifdef GRAALOS
+#include "../src/internal/x64_graalos/graal_syscall.h"
+#include "../src/internal/x64_graalos/musl_loader.h"
+#endif // GRAALOS
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -1031,7 +1038,12 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			is_self = 1;
 		}
 	}
+#ifdef GRAALOS
+	if (ldso.name && !strcmp(name, ldso.name)) is_self = 1;
+#else // GRAALOS
 	if (!strcmp(name, ldso.name)) is_self = 1;
+#endif // GRAALOS
+
 	if (is_self) {
 		if (!ldso.prev) {
 			tail->next = &ldso;
@@ -1105,17 +1117,20 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		close(fd);
 		return 0;
 	}
-	for (p=head->next; p; p=p->next) {
-		if (p->dev == st.st_dev && p->ino == st.st_ino) {
-			/* If this library was previously loaded with a
-			 * pathname but a search found the same inode,
-			 * setup its shortname so it can be found by name. */
-			if (!p->shortname && pathname != name)
-				p->shortname = strrchr(p->name, '/')+1;
-			close(fd);
-			return p;
-		}
-	}
+#ifdef GRAALOS
+        if (head)
+#endif // GRAALOS
+            for (p=head->next; p; p=p->next) {
+                    if (p->dev == st.st_dev && p->ino == st.st_ino) {
+                            /* If this library was previously loaded with a
+                             * pathname but a search found the same inode,
+                             * setup its shortname so it can be found by name. */
+                            if (!p->shortname && pathname != name)
+                                    p->shortname = strrchr(p->name, '/')+1;
+                            close(fd);
+                            return p;
+                    }
+            }
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) return 0;
@@ -1564,6 +1579,8 @@ weak_alias(dl_debug_state, _dl_debug_state);
 
 void __init_tls(size_t *auxv)
 {
+    // this function provides a strong alias for the symbol __init_tls, ensuring that the static_init_tls weak_alias
+    // is not bound to this symbol in __init_tls.c
 }
 
 static void update_tls_size()
@@ -1627,6 +1644,145 @@ static void install_new_tls(void)
 	__tl_unlock();
 	__restore_sigs(&set);
 }
+
+#ifdef GRAALOS
+void *graal_init_before_clone(struct musl_loader *ml)
+{
+    struct pthread *self;
+
+	libc.auxv = (size_t *)ml->auxv;
+	libc.tls_size = sizeof (builtin_tls);
+	libc.tls_align = tls_align;
+    libc.can_do_threads = 1;
+
+	self = __copy_tls((void *)builtin_tls);
+
+    self->stack = ml->stack;
+    self->stack_size = ml->stack_size;
+    self->locale = &libc.global_locale;
+
+    self->self = self;
+    self->next = self->prev = self;
+
+    // this is done here to support the simple graalos_clone (musl __clone copied to the visor)
+    self->syscall = ml->syscall_handler;
+
+    return self;
+}
+
+void graal_init_after_clone(struct musl_loader *ml)
+{
+    static struct dso app;
+    size_t aux[AUX_CNT];
+
+    decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
+
+    ldso.base = ml->loader_dso.base;
+
+	Ehdr *ehdr = (void *)ldso.base;
+	ldso.name = ldso.shortname = ml->loader_dso.name;
+	ldso.phnum = ehdr->e_phnum;
+	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
+	ldso.phentsize = ehdr->e_phentsize;
+	kernel_mapped_dso(&ldso);
+        
+	decode_dyn(&ldso);
+
+	head = &ldso;
+	reloc_all(&ldso);
+
+	ldso.relocated = 0;
+
+	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
+	__pthread_self()->sysinfo = __sysinfo;
+	libc.page_size = aux[AT_PAGESZ];
+	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
+		|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
+
+    app.base = ml->library_dso.base;
+
+	ehdr = (void *)app.base;
+	app.name = app.shortname = ml->library_dso.name;
+	app.phnum = ehdr->e_phnum;
+	app.phdr = laddr(&app, ehdr->e_phoff);
+	app.phentsize = ehdr->e_phentsize;
+        app.tls.align = ml->library_dso.tls.align;
+        app.tls.len = ml->library_dso.tls.len;
+        app.tls.size = ml->library_dso.tls.size;
+        app.tls.image = ml->library_dso.tls.image;
+	kernel_mapped_dso(&app);
+
+	decode_dyn(&app);
+
+    head = &app;
+    head->next = &ldso;
+    tail = &ldso;
+    syms_tail = &app;
+
+	for (struct dso *p=head; p; p=p->next)
+		add_syms(p);
+
+	if (app.tls.size) {
+		libc.tls_head = tls_tail = &app.tls;
+		app.tls_id = tls_cnt = 1;
+#ifdef TLS_ABOVE_TP
+		app.tls.offset = GAP_ABOVE_TP;
+		app.tls.offset += (-GAP_ABOVE_TP + (uintptr_t)app.tls.image)
+			& (app.tls.align-1);
+		tls_offset = app.tls.offset + app.tls.size;
+#else
+		tls_offset = app.tls.offset = app.tls.size
+			+ ( -((uintptr_t)app.tls.image + app.tls.size)
+			& (app.tls.align-1) );
+#endif
+		tls_align = MAXP2(tls_align, app.tls.align);
+	}
+
+	update_tls_size();
+	void *initial_tls = builtin_tls;
+	if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
+		initial_tls = calloc(libc.tls_size, 1);
+		if (!initial_tls) {
+			dprintf(2, "Error getting %zu bytes thread-local storage: %m\n",
+				libc.tls_size);
+			_exit(127);
+		}
+	}
+	static_tls_cnt = tls_cnt;
+
+	if (initial_tls != builtin_tls) {
+		if (__init_tp(__copy_tls(initial_tls)) < 0) {
+			a_crash();
+		} else {
+                        /* Reinitialize variables in self
+                         * because we created a new self to
+                         * accommodate the tls size. */
+                        pthread_t self = __pthread_self();
+                        self->stack = ml->stack;
+                        self->stack_size = ml->stack_size;
+                        self->locale = &libc.global_locale;
+
+                        self->syscall = ml->syscall_handler;
+                        self->self = self;
+                        self->next = self->prev = self;
+                }
+
+	} else {
+		size_t tmp_tls_size = libc.tls_size;
+		pthread_t self = __pthread_self();
+		/* Temporarily set the tls size to the full size of
+		 * builtin_tls so that __copy_tls will use the same layout
+		 * as it did for before. Then check, just to be safe. */
+		libc.tls_size = sizeof builtin_tls;
+		if (__copy_tls((void*)builtin_tls) != self) a_crash();
+		libc.tls_size = tmp_tls_size;
+	}
+
+	reloc_all(&app);
+    runtime = 1;
+}
+#endif // GRAALOS
+
 
 /* Stage 1 of the dynamic linker is defined in dlstart.c. It calls the
  * following stage 2 and stage 3 functions via primitive symbolic lookup

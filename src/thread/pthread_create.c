@@ -323,6 +323,9 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 	new->robust_list.head = &new->robust_list.head;
 	new->canary = self->canary;
 	new->sysinfo = self->sysinfo;
+#ifdef GRAALOS
+    new->syscall = self->syscall;   // must have some handler, may be overwritten by __clone
+#endif // GRAALOS
 
 	/* Setup argument structure for the new thread on its stack.
 	 * It's safe to access from the caller only until the thread
