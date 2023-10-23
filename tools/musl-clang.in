@@ -33,12 +33,11 @@ for x ; do
 done
 
 exec $cc \
+    -Wno-unused-command-line-argument \
     -B"$thisdir" \
     -fuse-ld=$linker \
-    -nostdinc \
     -nostdlib \
     --sysroot "$libc" \
-    -isystem "$libc_inc" \
     -L-user-start \
     $wrapper_flags \
     $sflags \

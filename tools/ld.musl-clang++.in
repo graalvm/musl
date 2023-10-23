@@ -79,4 +79,4 @@ $libc_lib/crtn.o \
 -L$libcxx/lib/linux/ \
 -rpath="$libc_lib:$libcxx/lib:$libcxx/lib/linux/" \
 --as-needed $builtins_lib --no-as-needed \
--lc -dynamic-linker "$ldso"
+-lc -lc++ -dynamic-linker "$ldso"
