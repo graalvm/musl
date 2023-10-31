@@ -1737,6 +1737,10 @@ void *graal_init_before_clone(struct musl_loader *ml)
 static Elf64_Sym *find_symbol(struct dso *dso, const char *s) {
     uint32_t gh = gnu_hash(s), gho = gh / (8*sizeof(size_t)), *ght;
     size_t ghm = 1ul << gh % (8*sizeof(size_t));
+//  It is only looking up the symbol in the Isolate for the entry point or the musl entry point, 
+//  so it only needs to look at one shared object instead of traversing through multiple shared
+//  objects in a linked list. The code behind comments is left in there because it is copied 
+//  from other place of this file musl and maybe wanted to change it in the future.
 #if 0
     struct dso **deps = use_deps ? dso->deps : 0;
     for (; dso; dso=use_deps ? *deps++ : dso->syms_next) {
@@ -1747,6 +1751,9 @@ static Elf64_Sym *find_symbol(struct dso *dso, const char *s) {
             if ((ght = dso->ghashtab)) {
                 sym = gnu_lookup_filtered(gh, ght, dso, s, gho, ghm);
             }
+// We do not want to copy the System V hash table code for the symbols because our shared objects
+// will only use the GNU hash table. The rest are macros that, although not needed now, could be 
+// needed in the future.
 #if 0
             else {
                 if (!h) h = sysv_hash(s);
