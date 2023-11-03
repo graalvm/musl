@@ -42,14 +42,13 @@ done
 
 if test "$set_isystem" ; then
 exec $cc \
+    -Wno-unused-command-line-argument \
     -B"$thisdir" \
     -fuse-ld=$linker \
     -nostdlib \
-    -nostdinc++ \
-    -nostdlib++ \
     --sysroot "$libc" \
-    -isystem "$libcxx/include/c++/v1" \
-    -D_LIBCPP_HAS_MUSL_LIBC \
+    --stdlib=libc++ \
+    -I"$libcxx/include/c++/v1" \
     -L-user-start \
     $wrapper_flags \
     $sflags \
@@ -60,13 +59,13 @@ exec $cc \
     -L-user-end
 else
 exec $cc \
+    -Wno-unused-command-line-argument \
     -B"$thisdir" \
     -fuse-ld=$linker \
     -nostdlib \
-    -nostdinc++ \
-    -nostdlib++ \
     --sysroot "$libc" \
-    -D_LIBCPP_HAS_MUSL_LIBC \
+    --stdlib=libc++ \
+    -I"$libcxx/include/c++/v1" \
     -L-user-start \
     $wrapper_flags \
     $sflags \
