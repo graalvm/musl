@@ -23,7 +23,9 @@ long __syscall_cp_c(syscall_arg_t nr,
                     syscall_arg_t x, syscall_arg_t y, syscall_arg_t z)
 {
 	pthread_t self;
+#ifndef GRAALOS
 	long r;
+#endif
 	int st;
 
 	if ((st=(self=__pthread_self())->canceldisable)
@@ -56,7 +58,9 @@ static void cancel_handler(int sig, siginfo_t *si, void *ctx)
 {
 	pthread_t self = __pthread_self();
 	ucontext_t *uc = ctx;
+#ifndef GRAALOS
 	uintptr_t pc = uc->uc_mcontext.MC_PC;
+#endif
 
 	a_barrier();
 	if (!self->cancel || self->canceldisable == PTHREAD_CANCEL_DISABLE) return;

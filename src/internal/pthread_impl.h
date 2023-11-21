@@ -45,10 +45,6 @@ struct pthread {
 	int tid;
 	int errno_val;
 
-#ifdef GRAALOS
-  syscall_handler_t syscall;
-#endif // GRAALOS
-
 	volatile int detach_state;
 	volatile int cancel;
 	volatile unsigned char canceldisable, cancelasync;

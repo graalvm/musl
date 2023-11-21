@@ -24,12 +24,6 @@
 #include "fork_impl.h"
 #include "libc.h"
 #include "dynlink.h"
-#include "syscall.h"
-
-#ifdef GRAALOS
-#include "../src/internal/x64_graalos/graal_syscall.h"
-#include "include/graalos/musl_loader.h"
-#endif // GRAALOS
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -44,6 +38,10 @@ static void error(const char *, ...);
 #define container_of(p,t,m) ((t*)((char *)(p)-offsetof(t,m)))
 #define countof(a) ((sizeof (a))/(sizeof (a)[0]))
 
+/*
+ * This macro can be enabled to trace the reason/location which produced an
+ * error that rejects loading a library - useful for diagnosing issues.
+ */
 //#define DEBUG_DYLINK(...) dprintf(2, __VA_ARGS__)
 #define DEBUG_DYLINK(...)
 
@@ -788,8 +786,15 @@ static void *map_library(int fd, struct dso *dso)
 		this_max = ph->p_vaddr+ph->p_memsz+PAGE_SIZE-1 & -PAGE_SIZE;
 		off_start = ph->p_offset & -PAGE_SIZE;
 
+		/*
+		 * GraalOS-specific change:
+		 * collect the start of the one (and only one) executable segment.
+		 * (*segment*, not section)
+		 */
 		if (ph->p_flags&PF_X) {
 			if (exec_base != NULL) {
+				// error: more than one executable segment
+				errno = ENOTSUP;
 				DEBUG_DYLINK("map-library-14\n");
 				goto error;
 			}
@@ -816,12 +821,21 @@ static void *map_library(int fd, struct dso *dso)
 			}
 		}
 	}
+	/*
+	 * GraalOS-specific:
+	 * we need exactly one executable segment.
+	 */
 	if (exec_base == NULL) {
+		errno = ENOTSUP;
 		DEBUG_DYLINK("map-library-15\n");
 		goto error;
 	}
 	for (i=0; ((size_t *)(base+dyn))[i]; i+=2)
 		if (((size_t *)(base+dyn))[i]==DT_TEXTREL) {
+			/*
+			 * GraalOS-specific change:
+			 * omit the executable segment when adding the "writable" permission for relocations.
+			 */
 			unsigned char* map_end = map + map_len;
 			unsigned char* exec_end = exec_base + exec_len;
 			DEBUG_DYLINK("map: %p map_len: %lx map_end: %p\n", (void*)map, map_len, (void*)map_end);
@@ -1086,11 +1100,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			is_self = 1;
 		}
 	}
-#ifdef GRAALOS
-	if (ldso.name && !strcmp(name, ldso.name)) is_self = 1;
-#else // GRAALOS
 	if (!strcmp(name, ldso.name)) is_self = 1;
-#endif // GRAALOS
 
 	if (is_self) {
 		if (!ldso.prev) {
@@ -1160,6 +1170,10 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 					sys_path = "";
 				}
 			}
+			/*
+			 * GraalOS-specific change:
+			 * add "/" to sys_path
+			 */
 			if (!sys_path) sys_path = "/:/lib:/usr/local/lib:/usr/lib";
 			fd = path_open(name, sys_path, buf, sizeof buf);
 		}
@@ -1174,21 +1188,18 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 		DEBUG_DYLINK("load_library-3-0 file=%s\n", name);
 		return 0;
 	}
-#ifdef GRAALOS
-        if (head)
-#endif // GRAALOS
-            for (p=head->next; p; p=p->next) {
-                    if (p->dev == st.st_dev && p->ino == st.st_ino) {
-                            /* If this library was previously loaded with a
-                             * pathname but a search found the same inode,
-                             * setup its shortname so it can be found by name. */
-                            if (!p->shortname && pathname != name)
-                                    p->shortname = strrchr(p->name, '/')+1;
-                            close(fd);
-                            DEBUG_DYLINK("load_library-4 file=%s\n", name);
-                            return p;
-                    }
-            }
+	for (p=head->next; p; p=p->next) {
+		if (p->dev == st.st_dev && p->ino == st.st_ino) {
+			/* If this library was previously loaded with a
+			 * pathname but a search found the same inode,
+			 * setup its shortname so it can be found by name. */
+			if (!p->shortname && pathname != name)
+				p->shortname = strrchr(p->name, '/')+1;
+			close(fd);
+			DEBUG_DYLINK("load_library-4 file=%s\n", name);
+			return p;
+		}
+	}
 	map = noload ? 0 : map_library(fd, &temp_dso);
 	close(fd);
 	if (!map) {
@@ -1709,213 +1720,6 @@ static void install_new_tls(void)
 	__restore_sigs(&set);
 }
 
-#ifdef GRAALOS
-void *graal_init_before_clone(struct musl_loader *ml)
-{
-    struct pthread *self;
-
-	libc.auxv = (size_t *)ml->auxv;
-	libc.tls_size = sizeof (builtin_tls);
-	libc.tls_align = tls_align;
-    libc.can_do_threads = 1;
-
-	self = __copy_tls((void *)builtin_tls);
-
-    self->stack = ml->stack;
-    self->stack_size = ml->stack_size;
-    self->locale = &libc.global_locale;
-
-    self->self = self;
-    self->next = self->prev = self;
-
-    // this is done here to support the simple graalos_clone (musl __clone copied to the visor)
-    self->syscall = ml->syscall_handler;
-
-    return self;
-}
-
-static Elf64_Sym *find_symbol(struct dso *dso, const char *s) {
-    uint32_t gh = gnu_hash(s), gho = gh / (8*sizeof(size_t)), *ght;
-    size_t ghm = 1ul << gh % (8*sizeof(size_t));
-//  It is only looking up the symbol in the Isolate for the entry point or the musl entry point, 
-//  so it only needs to look at one shared object instead of traversing through multiple shared
-//  objects in a linked list. The code behind comments is left in there because it is copied 
-//  from other place of this file musl and maybe wanted to change it in the future.
-#if 0
-    struct dso **deps = use_deps ? dso->deps : 0;
-    for (; dso; dso=use_deps ? *deps++ : dso->syms_next) {
-#endif
-        if (dso) {
-
-            Elf64_Sym *sym = NULL;
-            if ((ght = dso->ghashtab)) {
-                sym = gnu_lookup_filtered(gh, ght, dso, s, gho, ghm);
-            }
-// We do not want to copy the System V hash table code for the symbols because our shared objects
-// will only use the GNU hash table. The rest are macros that, although not needed now, could be 
-// needed in the future.
-#if 0
-            else {
-                if (!h) h = sysv_hash(s);
-                sym = sysv_lookup(s, h, dso);
-            }
-            if (!sym) continue;
-            if (!sym->st_shndx)
-                if (need_def || (sym->st_info&0xf) == STT_TLS
-                    || ARCH_SYM_REJECT_UND(sym))
-                    continue;
-            if (!sym->st_value)
-                if ((sym->st_info&0xf) != STT_TLS)
-                    continue;
-            if (!(1<<(sym->st_info&0xf) & OK_TYPES)) continue;
-            if (!(1<<(sym->st_info>>4) & OK_BINDS)) continue;
-#endif
-            return sym;
-        }
-        return NULL;
-}
-
-void graal_init_after_clone(struct musl_loader *ml)
-{
-    static struct dso app;
-    size_t aux[AUX_CNT];
-
-    decode_vec((size_t *)ml->auxv, aux, AUX_CNT);
-
-    ldso.base = ml->loader_dso.base;
-
-	Ehdr *ehdr = (void *)ldso.base;
-	ldso.name = ldso.shortname = ml->loader_dso.name;
-	ldso.phnum = ehdr->e_phnum;
-	ldso.phdr = laddr(&ldso, ehdr->e_phoff);
-	ldso.phentsize = ehdr->e_phentsize;
-	kernel_mapped_dso(&ldso);
-
-	decode_dyn(&ldso);
-
-	head = &ldso;
-	reloc_all(&ldso);
-
-	ldso.relocated = 0;
-
-	search_vec((size_t *)ml->auxv, &__sysinfo, AT_SYSINFO);
-	__pthread_self()->sysinfo = __sysinfo;
-	libc.page_size = aux[AT_PAGESZ];
-	libc.secure = ((aux[0]&0x7800)!=0x7800 || aux[AT_UID]!=aux[AT_EUID]
-			|| aux[AT_GID]!=aux[AT_EGID] || aux[AT_SECURE]);
-
-    int fd;
-    char *appname = "/app.so";
-    fd = open(appname, O_RDONLY);
-    if (fd < 0) {
-        dprintf(2, "%s: cannot load %s: %s\n", ldso.name, appname, strerror(errno));
-        _exit(1);
-    }
-    DEBUG_DYLINK("map_library %s\n", appname);
-    ehdr = map_library(fd, &app);
-    if (!ehdr) {
-        dprintf(2, "%s: %s: Not a valid dynamic program1\n", ldso.name, appname);
-        _exit(1);
-    }
-    close(fd);
-    app.name = appname;
-    decode_dyn(&app);
-    //aux[AT_ENTRY] = (size_t)laddr(&app, ehdr->e_entry);
-    Elf64_Sym *entry_sym = find_symbol(&app, ml->entry_name);
-    if (!entry_sym) {
-        entry_sym = find_symbol(&app, "main");
-        if (!entry_sym) {
-            dprintf(2, "Entry symbol not found: '%s' (or 'main')", ml->entry_name);
-            _exit(1);
-        }
-    }
-
-    ml->entry = (void*) (app.base + entry_sym->st_value);
-
-    head = &app;
-    head->next = &ldso;
-    tail = &ldso;
-    syms_tail = &app;
-
-	for (struct dso *p=head; p; p=p->next)
-		add_syms(p);
-
-	if (app.tls.size) {
-		libc.tls_head = tls_tail = &app.tls;
-		app.tls_id = tls_cnt = 1;
-#ifdef TLS_ABOVE_TP
-		app.tls.offset = GAP_ABOVE_TP;
-		app.tls.offset += (-GAP_ABOVE_TP + (uintptr_t)app.tls.image)
-			& (app.tls.align-1);
-		tls_offset = app.tls.offset + app.tls.size;
-#else
-		tls_offset = app.tls.offset = app.tls.size
-			+ ( -((uintptr_t)app.tls.image + app.tls.size)
-			& (app.tls.align-1) );
-#endif
-		tls_align = MAXP2(tls_align, app.tls.align);
-	}
-
-	update_tls_size();
-	void *initial_tls = builtin_tls;
-	if (libc.tls_size > sizeof builtin_tls || tls_align > MIN_TLS_ALIGN) {
-		initial_tls = calloc(libc.tls_size, 1);
-		if (!initial_tls) {
-			dprintf(2, "Error getting %zu bytes thread-local storage: %m\n", libc.tls_size);
-			_exit(127);
-		}
-	}
-	static_tls_cnt = tls_cnt;
-
-	if (initial_tls != builtin_tls) {
-		if (__init_tp(__copy_tls(initial_tls)) < 0) {
-			a_crash();
-		} else {
-			/* Reinitialize variables in self
-			 * because we created a new self to
-			 * accommodate the tls size. */
-			pthread_t self = __pthread_self();
-			self->stack = ml->stack;
-			self->stack_size = ml->stack_size;
-			self->locale = &libc.global_locale;
-
-			self->syscall = ml->syscall_handler;
-			self->self = self;
-			self->next = self->prev = self;
-		}
-
-	} else {
-		size_t tmp_tls_size = libc.tls_size;
-		pthread_t self = __pthread_self();
-		/* Temporarily set the tls size to the full size of
-		 * builtin_tls so that __copy_tls will use the same layout
-		 * as it did for before. Then check, just to be safe. */
-		libc.tls_size = sizeof builtin_tls;
-		if (__copy_tls((void*)builtin_tls) != self) a_crash();
-		libc.tls_size = tmp_tls_size;
-	}
-
-	/* Initial dso chain consists only of the app. */
-	head = tail = syms_tail = &app;
-
-	ldso.deps = (struct dso **)no_deps;
-	load_deps(&app);
-	for (struct dso *p=head; p; p=p->next)
-		add_syms(p);
-
-	main_ctor_queue = queue_ctors(&app);
-
-	/* The main program must be relocated LAST since it may contain
-	 * copy relocations which depend on libraries' relocations. */
-	reloc_all(app.next);
-	reloc_all(&app);
-
-        DEBUG_DYLINK("graalos loader: app successfully loaded\n");
-
-    runtime = 1;
-}
-#endif // GRAALOS
-
 
 /* Stage 1 of the dynamic linker is defined in dlstart.c. It calls the
  * following stage 2 and stage 3 functions via primitive symbolic lookup
@@ -1995,6 +1799,10 @@ hidden void __dls2(unsigned char *base, size_t *sp)
 
 void __dls2b(size_t *sp, size_t *auxv)
 {
+	/*
+	 * GraalOS: initialize visorcall pointer
+	 */
+	search_vec(auxv, (size_t*) &libc.visorcall, AT_SYSINFO);
 	/* Setup early thread pointer in builtin_tls for ldso/libc itself to
 	 * use during dynamic linking. If possible it will also serve as the
 	 * thread pointer at runtime. */
