@@ -31,3 +31,8 @@
 	".hidden " #sym "\n" \
 	"	lea " #sym "(%%rip),%0\n" \
 	: "=r"(*fp) : : "memory" )
+
+void inline __attribute__((always_inline))
+cfi_branch_target() {
+    __asm__ __volatile__ ("endbr64");
+}
