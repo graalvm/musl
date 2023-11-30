@@ -28,7 +28,7 @@
 
 #ifdef GRAALOS
 #include "../src/internal/x64_graalos/graal_syscall.h"
-#include "../src/internal/x64_graalos/musl_loader.h"
+#include "graalos/musl_loader.h"
 #endif // GRAALOS
 
 #define malloc __libc_malloc

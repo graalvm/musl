@@ -12,29 +12,31 @@ void graal_init_after_clone(struct musl_loader *ml);
 void *graal_init_before_clone(struct musl_loader *ml);
 void __libc_start_init(void);
 
-static int graal_start(void *arg)
-{
-    struct musl_loader *ml = arg;
+void graalos_start(thread_fn_t fn, void *arg);
 
-    graal_init_after_clone(ml);
+static int graal_start(void *arg) {
+  struct musl_loader *ml = arg;
 
-    if (ml->env) {
-        __environ = ml->env;
-    } else {
-        __environ = calloc(1, sizeof(char *));
-    }
+  graal_init_after_clone(ml);
 
-    // give graalos a chance to assert its control over scheduling and priority of this isolate thread and its eventual children
-    struct sched_param param;
-    pthread_t t = __pthread_self();
-	__syscall(SYS_sched_getparam, t->tid, &param);
-    __syscall(SYS_sched_setparam, t->tid, &param);
+  if (ml->env) {
+    __environ = ml->env;
+  } else {
+    __environ = calloc(1, sizeof(char *));
+  }
 
-    // Execute global constructors
-    __libc_start_init();
-    exit((*ml->entry)(ml->argc, ml->argv));
+  // give graalos a chance to assert its control over scheduling and priority of
+  // this isolate thread and its eventual children
+  struct sched_param param;
+  pthread_t t = __pthread_self();
+  __syscall(SYS_sched_getparam, t->tid, &param);
+  __syscall(SYS_sched_setparam, t->tid, &param);
 
-    return 0;
+  // Execute global constructors
+  __libc_start_init();
+  exit((*ml->entry)(ml->argc, ml->argv));
+
+  return 0;
 }
 
 int graalos_initial_thread(struct musl_loader *ml, void* tp)
@@ -50,7 +52,7 @@ int graalos_initial_thread(struct musl_loader *ml, void* tp)
      */
 
     unsigned char *stack = (unsigned char*)ml->stack + ml->stack_size;
-    return  (ml->clone_func)(graal_start, stack, ml, &self->tid, TP_ADJ(self), &__thread_list_lock, tp);
+    return  (ml->clone_func)(graalos_start, graal_start, stack, ml, &self->tid, TP_ADJ(self), &__thread_list_lock, tp);
 }
     
      

@@ -7,21 +7,31 @@
 #include "syscall.h"
 #include "syscall_internal.h"
 
-struct clone_params_t
-{
-    int   (*func)(void *);
-    //int     flags;
-    void*   arg;
-    void*   stack;
-    void*   tls;
-    pid_t*  ptid;
-    pid_t*  ctid;
+typedef int (*thread_fn_t)(void* arg);
+typedef void (*start_fn_t)(thread_fn_t fn, void* arg);
+
+struct clone_params_t {
+  start_fn_t start;
+  thread_fn_t func;
+  // int     flags;
+  void *arg;
+  void *stack;
+  void *tls;
+  pid_t *ptid;
+  pid_t *ctid;
 };
 
+void graalos_start(thread_fn_t fn, void *arg)
+{
+    int res = fn(arg);
+    __syscall1(SYS_exit, res);
+    __asm__ __volatile__("int3" :);
+}
 
 int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
+    params.start = &graalos_start;
     params.func = func;
     params.stack = stack;
     //params.flags = flags;
