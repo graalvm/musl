@@ -6,22 +6,10 @@
 #include "pthread_impl.h"
 #include "syscall.h"
 #include "syscall_internal.h"
+#include "graalos/musl_thread.h"
 
-typedef int (*thread_fn_t)(void* arg);
-typedef void (*start_fn_t)(thread_fn_t fn, void* arg);
 
-struct clone_params_t {
-  start_fn_t start;
-  thread_fn_t func;
-  // int     flags;
-  void *arg;
-  void *stack;
-  void *tls;
-  pid_t *ptid;
-  pid_t *ctid;
-};
-
-void graalos_start(thread_fn_t fn, void *arg)
+void graalos_thread_start(thread_fn_t fn, void *arg)
 {
     int res = fn(arg);
     __syscall1(SYS_exit, res);
@@ -31,7 +19,7 @@ void graalos_start(thread_fn_t fn, void *arg)
 int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
-    params.start = &graalos_start;
+    params.start = &graalos_thread_start;
     params.func = func;
     params.stack = stack;
     //params.flags = flags;

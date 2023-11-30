@@ -54,7 +54,7 @@ enum {
 #define _b_waiters2 __u.__vi[4]
 #define _b_inst __u.__p[3]
 
-#include "graalos/pthread.h"
+#include "graalos/musl_thread.h"
 
 #ifdef TLS_ABOVE_TP
 #define TP_ADJ(p) ((char *)(p) + sizeof(struct pthread) + TP_OFFSET)
