@@ -1,19 +1,86 @@
-#ifndef _PTHREAD_IMPL_H
-#define _PTHREAD_IMPL_H
+#ifndef GRAALOS_PTHREAD_IMPL_H
+#define GRAALOS_PTHREAD_IMPL_H
 
 #include <pthread.h>
 #include <signal.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
+#ifndef __cplusplus
 #include "libc.h"
 #include "syscall.h"
 #include "atomic.h"
 #include "futex.h"
+#endif
 
+#ifdef __cplusplus
+#define GRAALOS
+namespace musl {
+#else
+#include "include/graalos/musl_types.h"
 #include "pthread_arch.h"
+#endif // __cplusplus
 
 #define pthread __pthread
+
+struct pthread {
+    /* Part 1 -- these fields may be external or
+     * internal (accessed via asm) ABI. Do not change. */
+    struct pthread *self;
+#ifndef TLS_ABOVE_TP
+    uintptr_t *dtv;
+#endif
+    struct pthread *prev, *next; /* non-ABI */
+    uintptr_t sysinfo;
+#ifndef TLS_ABOVE_TP
+#ifdef CANARY_PAD
+	uintptr_t canary_pad;
+#endif
+	uintptr_t canary;
+#endif
+
+	/* Part 2 -- implementation details, non-ABI. */
+	int tid;
+	int errno_val;
+
+#ifdef GRAALOS
+  syscall_handler_t syscall;
+#endif // GRAALOS
+
+	volatile int detach_state;
+	volatile int cancel;
+	volatile unsigned char canceldisable, cancelasync;
+	unsigned char tsd_used:1;
+	unsigned char dlerror_flag:1;
+	unsigned char *map_base;
+	size_t map_size;
+	void *stack;
+	size_t stack_size;
+	size_t guard_size;
+	void *result;
+	struct __ptcb *cancelbuf;
+	void **tsd;
+	struct {
+		volatile void *volatile head;
+		long off;
+		volatile void *volatile pending;
+	} robust_list;
+	int h_errno_val;
+	volatile int timer_id;
+	locale_t locale;
+	volatile int killlock[1];
+	char *dlerror_buf;
+	void *stdio_locks;
+
+	/* Part 3 -- the positions of these fields relative to
+	 * the end of the structure is external and internal ABI. */
+#ifdef TLS_ABOVE_TP
+	uintptr_t canary;
+	uintptr_t *dtv;
+#endif
+};
+
+#ifndef __cplusplus
 
 enum {
 	DT_EXITED = 0,
@@ -54,7 +121,13 @@ enum {
 #define _b_waiters2 __u.__vi[4]
 #define _b_inst __u.__p[3]
 
-#include "graalos/musl_thread.h"
+#ifndef TP_OFFSET
+#define TP_OFFSET 0
+#endif
+
+#ifndef DTP_OFFSET
+#define DTP_OFFSET 0
+#endif
 
 #ifdef TLS_ABOVE_TP
 #define TP_ADJ(p) ((char *)(p) + sizeof(struct pthread) + TP_OFFSET)
@@ -143,5 +216,11 @@ extern hidden unsigned __default_guardsize;
 #define DEFAULT_GUARD_MAX (1<<20)
 
 #define __ATTRP_C11_THREAD ((void*)(uintptr_t)-1)
+
+#endif // ! __cplusplus
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif

@@ -6,7 +6,7 @@
 #include "pthread_impl.h"
 #include "syscall.h"
 #include "syscall_internal.h"
-#include "graalos/musl_thread.h"
+#include "include/graalos/musl_thread.h"
 
 
 void graalos_thread_start(thread_fn_t fn, void *arg)
