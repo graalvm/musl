@@ -53,7 +53,7 @@ struct _dso {
     struct tls_module tls;
 };
 
-typedef int (*clone_fn_t)(start_fn_t start, thread_fn_t fn, void *child_stack,
+typedef int (*clone_fn_t)(thread_fn_t fn, void *child_stack,
                           void *ml, int *tid, void *tls,
                           volatile void *tl_lock, void *tp);
 

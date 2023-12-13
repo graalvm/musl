@@ -12,8 +12,6 @@ void graal_init_after_clone(struct musl_loader *ml);
 void *graal_init_before_clone(struct musl_loader *ml);
 void __libc_start_init(void);
 
-void graalos_thread_start(thread_fn_t fn, void *arg);
-
 static int graal_start(void *arg) {
   struct musl_loader *ml = arg;
 
@@ -52,7 +50,7 @@ int graalos_initial_thread(struct musl_loader *ml, void* tp)
      */
 
     unsigned char *stack = (unsigned char*)ml->stack + ml->stack_size;
-    return  (ml->clone_func)(graalos_thread_start, graal_start, stack, ml, &self->tid, TP_ADJ(self), &__thread_list_lock, tp);
+    return  (ml->clone_func)(graal_start, stack, ml, &self->tid, TP_ADJ(self), &__thread_list_lock, tp);
 }
 
 

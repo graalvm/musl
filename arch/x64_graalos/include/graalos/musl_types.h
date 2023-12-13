@@ -11,9 +11,6 @@ typedef int (*main_fn_t)(int argc, char *argv[]);
 /// The user supplied thread start routine
 typedef int (*thread_fn_t)(void *arg);
 
-/// The internal musl wrapper
-typedef void (*start_fn_t)(thread_fn_t fn, void *arg);
-
 typedef long (*syscall_handler_t)(long n, long a1, long a2, long a3, long a4,
                                   long a5, long a6);
 

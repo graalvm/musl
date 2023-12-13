@@ -9,17 +9,9 @@
 #include "include/graalos/musl_thread.h"
 
 
-void graalos_thread_start(thread_fn_t fn, void *arg)
-{
-    int res = fn(arg);
-    __syscall1(SYS_exit, res);
-    __asm__ __volatile__("int3" :);
-}
-
 int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
     struct clone_params_t params;
-    params.start = &graalos_thread_start;
     params.func = func;
     params.stack = stack;
     //params.flags = flags;

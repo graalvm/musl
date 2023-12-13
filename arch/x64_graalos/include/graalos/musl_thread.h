@@ -24,7 +24,6 @@ namespace musl {
 
 
 struct clone_params_t {
-    start_fn_t start;
     thread_fn_t func;
     // int     flags;        -- removed because no user control of this is
     // supported
