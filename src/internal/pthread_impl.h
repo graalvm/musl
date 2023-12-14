@@ -1,29 +1,37 @@
-#ifndef _PTHREAD_IMPL_H
-#define _PTHREAD_IMPL_H
+#ifndef GRAALOS_PTHREAD_IMPL_H
+#define GRAALOS_PTHREAD_IMPL_H
 
 #include <pthread.h>
 #include <signal.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
+#ifndef __cplusplus
 #include "libc.h"
 #include "syscall.h"
 #include "atomic.h"
 #include "futex.h"
+#endif
 
+#ifdef __cplusplus
+#define GRAALOS
+namespace musl {
+#else
+#include "include/graalos/musl_types.h"
 #include "pthread_arch.h"
+#endif // __cplusplus
 
 #define pthread __pthread
 
 struct pthread {
-	/* Part 1 -- these fields may be external or
-	 * internal (accessed via asm) ABI. Do not change. */
-	struct pthread *self;
+    /* Part 1 -- these fields may be external or
+     * internal (accessed via asm) ABI. Do not change. */
+    struct pthread *self;
 #ifndef TLS_ABOVE_TP
-	uintptr_t *dtv;
+    uintptr_t *dtv;
 #endif
-	struct pthread *prev, *next; /* non-ABI */
-	uintptr_t sysinfo;
+    struct pthread *prev, *next; /* non-ABI */
+    uintptr_t sysinfo;
 #ifndef TLS_ABOVE_TP
 #ifdef CANARY_PAD
 	uintptr_t canary_pad;
@@ -36,7 +44,7 @@ struct pthread {
 	int errno_val;
 
 #ifdef GRAALOS
-    long (*syscall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
+  syscall_handler_t syscall;
 #endif // GRAALOS
 
 	volatile int detach_state;
@@ -71,6 +79,8 @@ struct pthread {
 	uintptr_t *dtv;
 #endif
 };
+
+#ifndef __cplusplus
 
 enum {
 	DT_EXITED = 0,
@@ -206,5 +216,11 @@ extern hidden unsigned __default_guardsize;
 #define DEFAULT_GUARD_MAX (1<<20)
 
 #define __ATTRP_C11_THREAD ((void*)(uintptr_t)-1)
+
+#endif // ! __cplusplus
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif

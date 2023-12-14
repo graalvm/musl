@@ -1,8 +1,16 @@
 // Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
-#ifndef __MUSL_LOADER_H
-#define __MUSL_LOADER_H
+#ifndef GRAALOS_MUSL_LOADER_H
+#define GRAALOS_MUSL_LOADER_H
 
 #include <elf.h>
+#include <stddef.h>
+
+#include "musl_types.h"
+#include "../../../../src/internal/pthread_impl.h"
+
+#ifdef __cplusplus
+namespace musl {
+#endif // __cplusplus
 
 #ifndef AUX_CNT
 #define AUX_CNT 38
@@ -11,11 +19,18 @@
 /* We need this for the struct match */
 #define _AUX_CNT 38
 
+#ifndef LIBC_H
+struct tls_module {
+    struct tls_module *next;
+    void *image;
+    size_t len, size, align, offset;
+};
+#endif
+
 struct auxv_entry {
     size_t key;
     size_t value;
 };
-
 
 struct _dso {
     unsigned char *base;
@@ -37,6 +52,10 @@ struct _dso {
     size_t *got;
     struct tls_module tls;
 };
+
+typedef int (*clone_fn_t)(thread_fn_t fn, void *child_stack,
+                          void *ml, int *tid, void *tls,
+                          volatile void *tl_lock, void *tp);
 
 struct musl_loader {
     int loader_fd;
@@ -63,10 +82,14 @@ struct musl_loader {
     int argc;
     char **argv;
     char **env;
-    char *entry_name;
-    int (*entry)(int argc, char *argv[]);
-    int (*clone_func)(int (*fn)(void *), void *child_stack, void *ml, int* tid, void* tls, volatile void* tl_lock, void* tp);
-    long (*syscall_handler)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
+    const char *entry_name;
+    main_fn_t entry;
+    clone_fn_t clone_func;
+    syscall_handler_t syscall_handler;
 };
 
-#endif /* __MUSL_LOADER_H */
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#endif /* GRAALOS_MUSL_LOADER_H */

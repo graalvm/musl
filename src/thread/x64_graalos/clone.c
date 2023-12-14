@@ -6,17 +6,7 @@
 #include "pthread_impl.h"
 #include "syscall.h"
 #include "syscall_internal.h"
-
-struct clone_params_t
-{
-    int   (*func)(void *);
-    //int     flags;
-    void*   arg;
-    void*   stack;
-    void*   tls;
-    pid_t*  ptid;
-    pid_t*  ctid;
-};
+#include "include/graalos/musl_thread.h"
 
 
 int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
