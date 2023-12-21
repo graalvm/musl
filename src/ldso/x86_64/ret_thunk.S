@@ -12,7 +12,7 @@ __x86_return_thunk:
 	lfence
 	pop     %rcx
 	jmpq    *%r11
-trap: 
+trap:
 #endif
 // make this trap immediately without __CET__
 	int3

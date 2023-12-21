@@ -40,7 +40,6 @@ long __syscall_cp_c(syscall_arg_t nr,
 	return r;
 #else // GRAALOS
         return __syscall(nr, u, v, w, x, y, z);
-
 #endif // GRAALOS
 }
 
@@ -68,7 +67,6 @@ static void cancel_handler(int sig, siginfo_t *si, void *ctx)
 	_sigaddset(&uc->uc_sigmask, SIGCANCEL);
 
 #ifndef GRAALOS
-
 	if (self->cancelasync || pc >= (uintptr_t)__cp_begin && pc < (uintptr_t)__cp_end) {
 		uc->uc_mcontext.MC_PC = (uintptr_t)__cp_cancel;
 #ifdef CANCEL_GOT

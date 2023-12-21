@@ -2,8 +2,8 @@
 #define _GNU_SOURCE
 #define SYSCALL_NO_TLS 1
 #include <stdlib.h>
-#include <stddef.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -838,8 +838,6 @@ static void *map_library(int fd, struct dso *dso)
 			 */
 			unsigned char* map_end = map + map_len;
 			unsigned char* exec_end = exec_base + exec_len;
-			DEBUG_DYLINK("map: %p map_len: %lx map_end: %p\n", (void*)map, map_len, (void*)map_end);
-			DEBUG_DYLINK("exec_base: %p exec_len: %lx exec_end: %p\n", (void*)exec_base, exec_len, (void*)exec_end);
 
 			if (map < exec_base) {
 				DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)map, exec_base - map);
@@ -1067,7 +1065,6 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	int n_th = 0;
 	int is_self = 0;
 
-	DEBUG_DYLINK("load_library-0 file=%s\n", name);
 	if (!*name) {
 		errno = EINVAL;
 		DEBUG_DYLINK("load_library-1 file=%s\n", name);
@@ -1108,7 +1105,6 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 			ldso.prev = tail;
 			tail = &ldso;
 		}
-		DEBUG_DYLINK("load_library-2 file=%s\n", name);
 		return &ldso;
 	}
 	if (strchr(name, '/')) {
@@ -1215,7 +1211,6 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
 		unmap_library(&temp_dso);
-		DEBUG_DYLINK("load_library-6 file=%s\n", name);
 		return load_library("libc.so", needed_by);
 	}
 	/* Past this point, if we haven't reached runtime yet, ldso has
@@ -1280,7 +1275,6 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 
 	if (ldd_mode) dprintf(1, "\t%s => %s (%p)\n", name, pathname, p->base);
 
-	DEBUG_DYLINK("load_library-8 file=%s\n", name);
 	return p;
 }
 
@@ -1928,7 +1922,6 @@ void __dls3(size_t *sp, size_t *auxv)
 			dprintf(2, "%s: cannot load %s: %s\n", ldname, argv[0], strerror(errno));
 			_exit(1);
 		}
-        printf("foo2\n");
 		Ehdr *ehdr = map_library(fd, &app);
 		if (!ehdr) {
 			dprintf(2, "%s: %s: Not a valid dynamic program\n", ldname, argv[0]);
@@ -2130,10 +2123,7 @@ void *dlopen(const char *file, int mode)
 	jmp_buf jb;
 	struct dso **volatile ctor_queue = 0;
 
-	DEBUG_DYLINK("DLOPEN-1\n");
-
 	if (!file) return head;
-	DEBUG_DYLINK("DLOPEN-1-3\n");
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);
 	pthread_rwlock_wrlock(&lock);
@@ -2142,7 +2132,6 @@ void *dlopen(const char *file, int mode)
 	debug.state = RT_ADD;
 	_dl_debug_state();
 
-	DEBUG_DYLINK("DLOPEN-2\n");
 	p = 0;
 	if (shutting_down) {
 		error("Cannot dlopen while program is exiting.");
@@ -2189,7 +2178,7 @@ void *dlopen(const char *file, int mode)
 		p = 0;
 		goto end;
 	} else p = load_library(file, head);
-	DEBUG_DYLINK("DLOPEN-2-1 file=%s p=%p\n", file, p);
+
 	if (!p) {
 		error(noload ?
 			"Library %s is not already loaded" :
@@ -2199,10 +2188,8 @@ void *dlopen(const char *file, int mode)
 	}
 
 	/* First load handling */
-	DEBUG_DYLINK("DLOPEN-3\n");
 	load_deps(p);
 	extend_bfs_deps(p);
-	DEBUG_DYLINK("DLOPEN-4\n");
 	pthread_mutex_lock(&init_fini_lock);
 	int constructed = p->constructed;
 	pthread_mutex_unlock(&init_fini_lock);

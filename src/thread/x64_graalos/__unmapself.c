@@ -7,4 +7,3 @@ void __unmapself(void *base, size_t size)
     // this call terminates the calling thread and unmaps its stack (specified by <base,size>)
     __syscall2(__VISORCALL_unmapself, base, size);
 }
-
