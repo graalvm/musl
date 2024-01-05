@@ -14,10 +14,11 @@
 #endif
 
 #ifdef __cplusplus
-#define GRAALOS
 namespace musl {
 #else
+#ifdef GRAALOS
 #include "include/graalos/musl_types.h"
+#endif
 #include "pthread_arch.h"
 #endif // __cplusplus
 
