@@ -2,6 +2,7 @@ __asm__(
 ".text \n"
 ".global " START " \n"
 START ": \n"
+"	endbr64 \n"
 "	xor %rbp,%rbp \n"
 "	mov %rsp,%rdi \n"
 ".weak _DYNAMIC \n"
