@@ -14,6 +14,7 @@
 #endif
 
 #ifdef __cplusplus
+#define GRAALOS
 namespace musl {
 #else
 #ifdef GRAALOS
