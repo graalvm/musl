@@ -28,6 +28,8 @@ struct __libc {
 	size_t tls_size, tls_align, tls_cnt;
 	size_t page_size;
 	struct __locale_struct global_locale;
+
+	long (*visorcall)(long n, long a1, long a2, long a3, long a4, long a5, long a6);
 };
 
 #ifndef PAGE_SIZE
