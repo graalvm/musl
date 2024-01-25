@@ -3,9 +3,7 @@
 .global __unmapself
 .type   __unmapself,@function
 __unmapself:
-#ifdef __CET__
 	endbr64
-#endif
 	movl $11,%eax   /* SYS_munmap */
 	syscall         /* munmap(arg2,arg3) */
 	xor %rdi,%rdi   /* exit() args: always return success */

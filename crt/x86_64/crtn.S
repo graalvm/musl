@@ -1,8 +1,6 @@
 .section .init
 .extern __x86_return_thunk
-#ifdef __CET__
 	endbr64
-#endif
 	pop %rax
 #ifdef __CET__
 	jmp __x86_return_thunk
@@ -11,9 +9,7 @@
 #endif
 
 .section .fini
-#ifdef __CET__
 	endbr64
-#endif
 	pop %rax
 #ifdef __CET__
 	jmp __x86_return_thunk

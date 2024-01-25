@@ -1,0 +1,1 @@
+../../../src/ldso/x86_64/tlsdesc.S
