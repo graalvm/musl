@@ -20,13 +20,13 @@ longjmp:
 	mov 48(%rdi),%rsp
 #ifdef __CET__
 	/* target check for software CFI: */
-	mov 56(%rdi),%rcx
+	mov 56(%rdi),%r8
 
-    mov     (%rcx),%ebx
-    add     $0x05e1f00d,%ebx
+    mov     (%r8),%ecx
+    add     $0x05e1f00d,%ecx
     jne     trap
     lfence
-    jmpq    *%rcx           /* goto saved address without altering rsp */
+    jmpq    *%r8           /* goto saved address without altering rsp */
 trap:
     int3
 #else
