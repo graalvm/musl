@@ -1,7 +1,13 @@
 #define __SYSCALL_LL_E(x) (x)
 #define __SYSCALL_LL_O(x) (x)
 
+//#define DUMP_SYSCALLS
+
+#ifdef DUMP_SYSCALLS
 void dump_syscall(long n, long a, long b, long c, long d, long e, long f);
+#else // DUMP_SYSCALLS
+#define dump_syscall(n, a, b, c, d, e, f)
+#endif // DUMP_SYSCALLS
 
 static __inline long __syscall0(long n)
 {

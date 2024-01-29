@@ -7,8 +7,6 @@
 
 #undef syscall
 
-//#define DUMP_SYSCALLS
-
 #define VISORCALL_mmap_fixed_offset          ((1ul << 63) | (10ul))
 
 #ifdef DUMP_SYSCALLS
@@ -16,10 +14,6 @@ void dump_syscall(long n, long a, long b, long c, long d, long e, long f) {
 	if (n != SYS_write && n != SYS_writev) {
 		dprintf(1, "SYSCALL 0x%2lx args: 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx 0x%lx\n", n, a, b, c, d, e, f);
 	}
-}
-#else // DUMP_SYSCALLS
-void dump_syscall(long n, long a, long b, long c, long d, long e, long f) {
-	// empty
 }
 #endif // DUMP_SYSCALLS
 
