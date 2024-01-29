@@ -628,6 +628,42 @@ static void unmap_library(struct dso *dso)
 	}
 }
 
+
+static void prepare_reloc(struct dso* p)
+{
+	DEBUG_DYLINK("prepare_reloc\n");
+	size_t this_min, this_max;
+	Phdr *ph;
+	size_t i;
+	unsigned char* segment_base;
+	size_t segment_len;
+
+	/*
+	 * GraalOS-specific change:
+	 * omit the executable segment when adding the "writable" permission for relocations.
+	 */
+	for (i=0; p->dynv[i]; i+=2)
+		if (p->dynv[i]==DT_TEXTREL) {
+
+			for (ph=p->phdr, i=p->phnum; i; i--, ph=(void *)((char *)ph+p->phentsize)) {
+				if (ph->p_type != PT_LOAD) continue;
+
+				if (!(ph->p_flags&PF_X)) {
+					this_min = ph->p_vaddr & -PAGE_SIZE;
+					this_max = ph->p_vaddr+ph->p_memsz+PAGE_SIZE-1 & -PAGE_SIZE;
+					segment_base = p->base + this_min;
+					segment_len = this_max - this_min;
+					DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)segment_base, segment_len);
+					if (mprotect(segment_base, segment_len, PROT_READ|PROT_WRITE) && errno != ENOSYS) {
+						dprintf(2, "%s: Cannot mprotect ELF contents (error: %i %s)\n", p->name, errno, strerror(errno));
+						_exit(1);
+					}
+				}
+			}
+			break;
+		}
+}
+
 static void *map_library(int fd, struct dso *dso)
 {
 	DEBUG_DYLINK("map_library\n");
@@ -769,8 +805,6 @@ static void *map_library(int fd, struct dso *dso)
 	base = map - addr_min;
 	dso->phdr = 0;
 	dso->phnum = 0;
-	unsigned char* exec_base = NULL;
-	size_t exec_len = 0;
 	for (ph=ph0, i=eh->e_phnum; i; i--, ph=(void *)((char *)ph+eh->e_phentsize)) {
 		if (ph->p_type != PT_LOAD) continue;
 		/* Check if the programs headers are in this load segment, and
@@ -785,23 +819,6 @@ static void *map_library(int fd, struct dso *dso)
 		this_min = ph->p_vaddr & -PAGE_SIZE;
 		this_max = ph->p_vaddr+ph->p_memsz+PAGE_SIZE-1 & -PAGE_SIZE;
 		off_start = ph->p_offset & -PAGE_SIZE;
-
-		/*
-		 * GraalOS-specific change:
-		 * collect the start of the one (and only one) executable segment.
-		 * (*segment*, not section)
-		 */
-		if (ph->p_flags&PF_X) {
-			if (exec_base != NULL) {
-				// error: more than one executable segment
-				errno = ENOTSUP;
-				DEBUG_DYLINK("map-library-14\n");
-				goto error;
-			}
-			exec_base = base + this_min;
-			exec_len = this_max - this_min;
-		}
-
 		prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
 			((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
 			((ph->p_flags&PF_X) ? PROT_EXEC : 0));
@@ -821,43 +838,10 @@ static void *map_library(int fd, struct dso *dso)
 			}
 		}
 	}
-	/*
-	 * GraalOS-specific:
-	 * we need exactly one executable segment.
-	 */
-	if (exec_base == NULL) {
-		errno = ENOTSUP;
-		DEBUG_DYLINK("map-library-15\n");
-		goto error;
-	}
-	for (i=0; ((size_t *)(base+dyn))[i]; i+=2)
-		if (((size_t *)(base+dyn))[i]==DT_TEXTREL) {
-			/*
-			 * GraalOS-specific change:
-			 * omit the executable segment when adding the "writable" permission for relocations.
-			 */
-			unsigned char* map_end = map + map_len;
-			unsigned char* exec_end = exec_base + exec_len;
-
-			if (map < exec_base) {
-				DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)map, exec_base - map);
-				if (mprotect(map, exec_base - map, PROT_READ|PROT_WRITE) && errno != ENOSYS) {
-					DEBUG_DYLINK("map-library-16: %s\n", strerror(errno));
-					goto error;
-				}
-			}
-			if (map_end > exec_end) {
-				DEBUG_DYLINK("mapping as RW: %p %lx\n", (void*)exec_end, map_end - exec_end);
-				if (mprotect(exec_end, map_end - exec_end, PROT_READ|PROT_WRITE) && errno != ENOSYS) {
-					DEBUG_DYLINK("map-library-17: %s\n", strerror(errno));
-					goto error;
-				}
-			}
-			break;
-		}
 done_mapping:
 	dso->base = base;
 	dso->dynv = laddr(dso, dyn);
+	prepare_reloc(dso);
 	if (dso->tls.size) dso->tls.image = laddr(dso, tls_image);
 	free(allocated_buf);
 	return map;
@@ -1878,6 +1862,11 @@ void __dls3(size_t *sp, size_t *auxv)
 		else
 			app.name = argv[0];
 		kernel_mapped_dso(&app);
+		/*
+		 * GraalOS-specific change:
+		 * Ensure that relocation can write to the pages even in this mode.
+		 */
+		prepare_reloc(&app);
 	} else {
 		int fd;
 		char *ldname = argv[0];

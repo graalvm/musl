@@ -2,9 +2,7 @@
 .global vfork
 .type vfork,@function
 vfork:
-#ifdef __CET__
 	endbr64
-#endif
 	mov $-38,%eax
 	mov %rax,%rdi
 	.hidden __syscall_ret
