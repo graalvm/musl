@@ -35,15 +35,19 @@ long syscall(long n, ...)
 	e=va_arg(ap, syscall_arg_t);
 	f=va_arg(ap, syscall_arg_t);
 	va_end(ap);
+
+#ifndef GRAALOS
+	/*
+	 * Map GraalOS-specific call to normal syscalls:
+	 */
 	if (n == VISORCALL_mmap_fixed_offset) {
-		/*
-		 * Map GraalOS-specific call to normal syscalls:
-		 */
 		n = SYS_mmap;
 	}
 	if (n < 0) {
 		dprintf(2, "unsupported VISOR syscall: 0x%x\n", n);
 		exit(-1);
 	}
+#endif // GRAALOS
+
 	return __syscall_ret(__syscall(n,a,b,c,d,e,f));
 }
