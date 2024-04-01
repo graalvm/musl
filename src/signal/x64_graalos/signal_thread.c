@@ -32,8 +32,6 @@ static void* signal_handling_func(void*) {
         ts.tv_sec = ts.tv_nsec = -1; // special timeout to tell visor to deliver any signal with a handler
         int sig = sigtimedwait(&waitset, &info, &ts);
         if (sig > 0) {
-            fprintf(stderr, "signal_handling_func return %d\n", sig);
-
             struct sigaction old;
             if (sigaction(sig, NULL, &old) == 0) {
                 if (old.sa_flags & SA_SIGINFO) {
@@ -41,24 +39,16 @@ static void* signal_handling_func(void*) {
                     //        The problems with this approach are that (a) signal handlers will be called from an otherwise unknown (to the
                     //        isolate) thread, and (b) sending signals to a specific thread to be handled there won't work.
                     if (old.sa_sigaction) {
-                        fprintf(stderr, "signal_handling_func calling action handler for %d\n", sig);
                         ucontext_t context;
-                        // getcontext(&context);         -- not implemented my MUSL
                         memset(&context, 0, sizeof(context));
+                        // getcontext(&context);         -- not implemented my MUSL
                         old.sa_sigaction(sig, &info, &context);
-                    } else {
-                        fprintf(stderr, "signal_handling_func did not find an action handler for %d\n", sig);
                     }
                 } else {
                     if (old.sa_handler) {
-                        fprintf(stderr, "signal_handling_func calling handler for %d\n", sig);
                         old.sa_handler(sig);
-                    } else {
-                        fprintf(stderr, "signal_handling_func did not find a handler for %d\n", sig);
                     }
                 }
-            } else {
-                fprintf(stderr, "signal_handling_func did not find a sigaction for %d\n", sig);
             }
         }
     }
