@@ -11,19 +11,26 @@
 
 extern int __sigaction(int sig, const struct sigaction* restrict sa, struct sigaction* restrict old);
 
-static volatile int signal_thread_started = 0;
-static sigset_t     signal_thread_waitset;
+static pthread_mutex_t signal_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int             signal_thread_inited = 0;
+static int             signal_thread_started = 0;
+static sigset_t        signal_thread_waitset;
 
-static void* signal_handling_func(void* waitset) {
+static void* signal_handling_func(void*) {
     sigset_t mask;
     sigfillset(&mask);
     sigprocmask(SIG_SETMASK, &mask, NULL); // block everything so this thread will not be signalled
 
     while (1) {
+        // each iteration retrieve the current waitset while under lock
+        pthread_mutex_lock(&signal_thread_mutex);
+        sigset_t waitset = signal_thread_waitset;
+        pthread_mutex_unlock(&signal_thread_mutex);
+
         siginfo_t       info;
         struct timespec ts;
         ts.tv_sec = ts.tv_nsec = -1; // special timeout to tell visor to deliver any signal with a handler
-        int sig = sigtimedwait((sigset_t*)waitset, &info, &ts);
+        int sig = sigtimedwait(&waitset, &info, &ts);
         if (sig > 0) {
             fprintf(stderr, "signal_handling_func return %d\n", sig);
 
@@ -61,11 +68,17 @@ static void* signal_handling_func(void* waitset) {
 }
 
 static void graalos_update_signal_handler_thread(int sig, int installed) {
+    pthread_mutex_lock(&signal_thread_mutex);
+
+    if (!signal_thread_inited) {
+        sigemptyset(&signal_thread_waitset);
+        signal_thread_inited = 1;
+    }
+
     if (installed) {
         sigaddset(&signal_thread_waitset, sig);
 
-        int started = signal_thread_started;
-        if (!started && !a_cas(&signal_thread_started, started, 1)) {
+        if (!signal_thread_started) {
             // ensure that signal handling thread wakes on SIGSYS
             sigaddset(&signal_thread_waitset, SIGSYS);
 
@@ -75,14 +88,16 @@ static void graalos_update_signal_handler_thread(int sig, int installed) {
 
             pthread_t thread;
             pthread_create(&thread, &attr, signal_handling_func, &signal_thread_waitset);
-        } else {
-            // either signal handling thread was already running or another thread beat us to
-            // starting it... just wake it up with SIGSYS so it re-issues its signal wait
-            raise(SIGSYS);
         }
     } else {
         sigdelset(&signal_thread_waitset, sig);
-        raise(SIGSYS); // wake signal handling thread to re-issue its signal wait
+    }
+
+    pthread_mutex_unlock(&signal_thread_mutex);
+
+    if (signal_thread_started) {
+        // wake signal handling thread to deal with changes to its waitset
+        raise(SIGSYS);
     }
 }
 
@@ -90,7 +105,7 @@ int sigaction(int sig, const struct sigaction* restrict sa, struct sigaction* re
     // call core MUSL implementation
     int result = __sigaction(sig, sa, old);
 
-    if (sa && !result) {
+    if (sa && !result && (sig > 0)) {
         graalos_update_signal_handler_thread(sig, (uintptr_t)sa->sa_handler > 1UL);
     }
 
