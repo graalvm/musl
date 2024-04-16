@@ -69,6 +69,8 @@ static void graalos_update_signal_handler_thread(int sig, int installed) {
         sigaddset(&signal_thread_waitset, sig);
 
         if (!signal_thread_started) {
+            signal_thread_started = 1;
+
             // ensure that signal handling thread wakes on SIGSYS
             sigaddset(&signal_thread_waitset, SIGSYS);
 
