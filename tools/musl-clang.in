@@ -17,12 +17,19 @@ linker=musl-clang
 # prevent clang from running the linker (and erroring) on no input.
 sflags=
 eflags=
+x_opt=
+x_opt_val=
 for x ; do
+    if test "$x_opt" ; then
+        x_opt_val=$x
+        x_opt=
+    fi
     case "$x" in
         # -r indicates that the output is an ordinary relocatable object file and 
         # thus we will not forward to the ld.musl-clang++ wrapper
         -r) linker=lld ;;
         -l*) input=1 ;;
+        -x) x_opt=1 ;;
         *) input= ;;
     esac
     if test "$input" ; then
@@ -32,6 +39,9 @@ for x ; do
     fi
 done
 
+if [ "$x_opt_val" = "c++-header" ]; then
+    ${SELF_DIR}/musl-clang++ "$@"
+else
 exec $cc \
     -Wno-unused-command-line-argument \
     -B"$thisdir" \
@@ -45,3 +55,4 @@ exec $cc \
     $eflags \
     -L"$libc_lib" \
     -L-user-end
+fi    

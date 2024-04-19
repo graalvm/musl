@@ -23,6 +23,7 @@ int    dlclose(void *);
 char  *dlerror(void);
 void  *dlopen(const char *, int);
 void  *dlsym(void *__restrict, const char *__restrict);
+void  *dlvsym(void *handle, const char *symbol, const char *version);
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
 typedef struct {

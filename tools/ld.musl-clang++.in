@@ -49,6 +49,9 @@ for x ; do
         -l*)
             test "$userlink" && set -- "$@" "$x"
             ;;
+        -version-script=*)
+            # GNU LD Version scripts not supported
+            ;;
         -shared)
             shared=1
             set -- "$@" -shared

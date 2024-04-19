@@ -966,10 +966,13 @@ static void decode_dyn(struct dso *p)
 	p->strings = laddr(p, dyn[DT_STRTAB]);
 	if (dyn[0]&(1<<DT_HASH))
 		p->hashtab = laddr(p, dyn[DT_HASH]);
-	if (dyn[0]&(1<<DT_RPATH))
-		p->rpath_orig = p->strings + dyn[DT_RPATH];
-	if (dyn[0]&(1<<DT_RUNPATH))
-		p->rpath_orig = p->strings + dyn[DT_RUNPATH];
+	// The untrusted loader should ignore rpath
+	#ifndef GRAALOS
+		if (dyn[0]&(1<<DT_RPATH))
+			p->rpath_orig = p->strings + dyn[DT_RPATH];
+		if (dyn[0]&(1<<DT_RUNPATH))
+			p->rpath_orig = p->strings + dyn[DT_RUNPATH];
+	#endif
 	if (dyn[0]&(1<<DT_PLTGOT))
 		p->got = laddr(p, dyn[DT_PLTGOT]);
 	if (search_vec(p->dynv, dyn, DT_GNU_HASH))
