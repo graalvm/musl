@@ -11,3 +11,4 @@ int __fstat(int fd, struct stat *st)
 }
 
 weak_alias(__fstat, fstat);
+weak_alias(__fstat, fstat64);
