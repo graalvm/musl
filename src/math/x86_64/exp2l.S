@@ -14,7 +14,7 @@ expm1l:
 		# x*log2e <= -65, return -1 without underflow
 	fstp %st(1)
 	fchs
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -25,7 +25,7 @@ expm1l:
 	fstp %st(0)
 	ja 1f
 	f2xm1
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -35,7 +35,7 @@ expm1l:
 	pop %rax
 	fld1
 	fsubrp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -79,7 +79,7 @@ exp2l:
 1:	fscale
 	fstp %st(1)
 	add $16,%rsp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -99,7 +99,7 @@ exp2l:
 	fldt (%rsp)       # 2^rint(x)
 	fmulp
 	add $16,%rsp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

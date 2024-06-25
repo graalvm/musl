@@ -76,7 +76,7 @@ static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long
 	return ret;
 }
 
-#ifndef __CET__
+#ifndef __SANDBOX_SWCFI__
 #define VDSO_USEFUL
 #define VDSO_CGT_SYM "__vdso_clock_gettime"
 #define VDSO_CGT_VER "LINUX_2.6"

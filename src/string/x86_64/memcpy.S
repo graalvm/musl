@@ -25,7 +25,7 @@ __memcpy_fwd:
 	dec %edx
 	jnz 2b
 1:
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

@@ -28,7 +28,7 @@ __cp_begin:
 	mov %r11,8(%rsp)
 	syscall
 __cp_end:
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

@@ -11,7 +11,7 @@
 #define REL_TPOFF       R_X86_64_TPOFF64
 #define REL_TLSDESC     R_X86_64_TLSDESC
 
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 #define CRTJMP(pc,sp) __asm__ __volatile__( \
     " mov %1,%%rsp ;" \
     " mov (%0), %%ecx ;" \

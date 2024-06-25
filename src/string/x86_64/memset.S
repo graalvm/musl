@@ -49,7 +49,7 @@ memset:
 	mov %rax,(-1-2-4-8-16-8)(%rdi,%rdx)
 
 1:	mov %rdi,%rax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -65,7 +65,7 @@ memset:
 	rep
 	stosq
 	mov %r8,%rax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

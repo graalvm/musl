@@ -15,7 +15,7 @@ memmove:
 	rep movsb
 	cld
 	lea 1(%rdi),%rax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
