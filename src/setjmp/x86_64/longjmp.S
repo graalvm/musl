@@ -16,7 +16,7 @@ longjmp:
 	mov 32(%rdi),%r14
 	mov 40(%rdi),%r15
 	mov 48(%rdi),%rsp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	/* target check for software CFI: */
 	mov 56(%rdi),%r8
 

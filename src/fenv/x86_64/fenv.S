@@ -19,7 +19,7 @@ feclearexcept:
 	and %ecx,-8(%rsp)
 	ldmxcsr -8(%rsp)
 1:	xor %eax,%eax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -35,7 +35,7 @@ feraiseexcept:
 	or %edi,-8(%rsp)
 	ldmxcsr -8(%rsp)
 	xor %eax,%eax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -59,7 +59,7 @@ __fesetround:
 	or %ch,1(%rsp)
 	ldmxcsr (%rsp)
 	pop %rcx
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -74,7 +74,7 @@ fegetround:
 	pop %rax
 	shr $3,%eax
 	and $0xc00,%eax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -87,7 +87,7 @@ fegetenv:
 	xor %eax,%eax
 	fnstenv (%rdi)
 	stmxcsr 28(%rdi)
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -102,7 +102,7 @@ fesetenv:
 	jz 1f
 	fldenv -1(%rdi)
 	ldmxcsr 27(%rdi)
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -115,7 +115,7 @@ fesetenv:
 	pushq $0x1f80
 	ldmxcsr (%rsp)
 	add $40,%rsp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -132,7 +132,7 @@ fetestexcept:
 	fnstsw %ax
 	or %esi,%eax
 	and %edi,%eax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

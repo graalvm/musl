@@ -23,14 +23,14 @@ expl:
 		// if |x|>=0x1p14 or nan return 2^trunc(x)
 	fscale
 	fstp %st(1)
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
 #endif
 		// if |x|<0x1p-32 return 1+x
 1:	faddp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -108,7 +108,7 @@ expl:
 	fmul %st(1), %st
 	faddp
 1:	addq $48, %rsp
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

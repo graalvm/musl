@@ -2,7 +2,7 @@
 .type   __x86_return_thunk,@function
 __x86_return_thunk:
 
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	endbr64
 	pop     %r11
 	push    %rcx
@@ -14,5 +14,5 @@ __x86_return_thunk:
 	jmpq    *%r11
 trap:
 #endif
-// make this trap immediately without __CET__
+// make this trap immediately without __SANDBOX_SWCFI__
 	int3

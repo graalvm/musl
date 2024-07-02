@@ -10,7 +10,7 @@ log1pl:
 	cmp $0x3ffd9400,%eax
 	ja 1f
 	fyl2xp1
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -18,7 +18,7 @@ log1pl:
 1:	fld1
 	faddp
 	fyl2x
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

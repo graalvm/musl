@@ -6,7 +6,7 @@
 __tlsdesc_static:
 	endbr64
 	mov 8(%rax),%rax
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
@@ -27,7 +27,7 @@ __tlsdesc_dynamic:
 	pop %rcx
 	sub %fs:0,%rax
 	pop %rdx
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret

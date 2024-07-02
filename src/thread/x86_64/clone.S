@@ -21,7 +21,7 @@ __clone:
 	jnz 1f
 	xor %ebp,%ebp
 	pop %rdi
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	mov (%r9),%ebx
     add $0x05e1f00d,%ebx
     je success
@@ -37,7 +37,7 @@ success:
 	syscall
 	hlt
 1:
-#ifdef __CET__
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
 #else
 	ret
