@@ -40,6 +40,18 @@ for x ; do
     fi
 done
 
+if test "$linker" == "musl-clang++"; then
+    # we want to control which linker to use, drop user arguments that interfere
+    cleared=
+    for x ; do
+        test "$cleared" || set -- ; cleared=1
+        case "$x" in
+            -fuse-ld=*) ;; # drop
+            *) set -- "$@" "$x" ;;
+        esac
+    done
+fi
+
 if test "$set_isystem" ; then
 exec $cc \
     -Wno-unused-command-line-argument \
