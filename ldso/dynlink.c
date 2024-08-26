@@ -788,9 +788,10 @@ static void *map_library(int fd, struct dso *dso)
 		if (ph->p_vaddr < addr_min) {
 			addr_min = ph->p_vaddr;
 			off_start = ph->p_offset;
-			prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
-				((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
-				((ph->p_flags&PF_X) ? PROT_EXEC : 0));
+			/*
+			 * GraalOS-specific change:
+			 * don't collect the first segment's prot flags, they are not used for the initial mapping.
+			 */
 		}
 		if (ph->p_vaddr+ph->p_memsz > addr_max) {
 			addr_max = ph->p_vaddr+ph->p_memsz;
@@ -849,10 +850,14 @@ static void *map_library(int fd, struct dso *dso)
 	 * the length of the file. This is okay because we will not
 	 * use the invalid part; we just need to reserve the right
 	 * amount of virtual address space to map over later. */
+	/*
+	 * GraalOS-specific change:
+	 * the initial mapping is done with PROT_NONE instead of the first segment's access flags.
+	 */
 	map = DL_NOMMU_SUPPORT
 		? mmap((void *)addr_min, map_len, PROT_READ|PROT_WRITE|PROT_EXEC,
 			MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)
-		: mmap((void *)addr_min, map_len, prot,
+		: mmap((void *)addr_min, map_len, PROT_NONE,
 			MAP_PRIVATE, fd, off_start);
 	if (map==MAP_FAILED) { DEBUG_DYLINK("map-library-9\n"); goto error; }
 	dso->map = map;
@@ -884,12 +889,15 @@ static void *map_library(int fd, struct dso *dso)
 		prot = (((ph->p_flags&PF_R) ? PROT_READ : 0) |
 			((ph->p_flags&PF_W) ? PROT_WRITE: 0) |
 			((ph->p_flags&PF_X) ? PROT_EXEC : 0));
-		/* Reuse the existing mapping for the lowest-address LOAD */
-		if ((ph->p_vaddr & -PAGE_SIZE) != addr_min || DL_NOMMU_SUPPORT)
-			if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED) {
-				DEBUG_DYLINK("map-library-11\n");
-				goto error;
-			}
+
+		/*
+		 * GraalOS-specific change:
+		 * map the first segment like all other segments (because the initial mapping happens with PROT_NONE).
+		 */
+		if (mmap_fixed(base+this_min, this_max-this_min, prot, MAP_PRIVATE|MAP_FIXED, fd, off_start) == MAP_FAILED) {
+			DEBUG_DYLINK("map-library-11\n");
+			goto error;
+		}
 		if (ph->p_memsz > ph->p_filesz && (ph->p_flags&PF_W)) {
 			size_t brk = (size_t)base+ph->p_vaddr+ph->p_filesz;
 			size_t pgbrk = brk+PAGE_SIZE-1 & -PAGE_SIZE;
