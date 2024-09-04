@@ -824,6 +824,7 @@ typedef struct {
 #define DT_EXTRATAGIDX(tag)	((Elf32_Word)-((Elf32_Sword) (tag) <<1>>1)-1)
 #define DT_EXTRANUM	3
 
+#define DT_GRAALOS      (DT_LOOS + 1)
 
 #define DF_ORIGIN	0x00000001
 #define DF_SYMBOLIC	0x00000002
