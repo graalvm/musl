@@ -824,7 +824,6 @@ typedef struct {
 #define DT_EXTRATAGIDX(tag)	((Elf32_Word)-((Elf32_Sword) (tag) <<1>>1)-1)
 #define DT_EXTRANUM	3
 
-#define DT_GRAALOS      (DT_LOOS + 1)
 
 #define DF_ORIGIN	0x00000001
 #define DF_SYMBOLIC	0x00000002
@@ -3293,6 +3292,8 @@ enum
 #define R_RISCV_SET16           55
 #define R_RISCV_SET32           56
 #define R_RISCV_32_PCREL        57
+
+#include "elf_graalos.h"
 
 #ifdef __cplusplus
 }

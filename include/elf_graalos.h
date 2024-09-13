@@ -1,0 +1,8 @@
+#ifndef _ELF_GRAALOS_H
+#define _ELF_GRAALOS_H
+
+#define AT_GRAALOS_VERIFIED_PATHS  60
+
+#define DT_GRAALOS  0x6000000e
+
+#endif //  _ELF_GRAALOS_H

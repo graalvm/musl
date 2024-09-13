@@ -2,6 +2,8 @@
 #ifndef GRAALOS_MUSL_TYPES_H
 #define GRAALOS_MUSL_TYPES_H
 
+#include "../../../../include/elf_graalos.h"
+
 #ifdef __cplusplus
 namespace musl {
 #endif // __cplusplus

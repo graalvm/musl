@@ -1274,6 +1274,7 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	if (!temp_dso.graalos) {
 		DEBUG_DYLINK("graalos section missing in %s\n", name);
 		unmap_library(&temp_dso);
+		errno = EINVAL;
 		return 0;
 	}
 
