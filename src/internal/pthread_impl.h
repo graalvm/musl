@@ -194,7 +194,7 @@ extern hidden volatile int __abort_lock[1];
 extern hidden unsigned __default_stacksize;
 extern hidden unsigned __default_guardsize;
 
-#define DEFAULT_STACK_SIZE 131072
+#define DEFAULT_STACK_SIZE (2 * 1024 * 1024)
 #define DEFAULT_GUARD_SIZE 8192
 
 #define DEFAULT_STACK_MAX (8<<20)
