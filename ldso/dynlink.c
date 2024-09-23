@@ -1271,12 +1271,14 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	 * false positives from interposition-hack libraries. */
 	decode_dyn(&temp_dso);
 
+#ifndef OUT_OF_SANDBOX
 	if (!temp_dso.graalos) {
 		DEBUG_DYLINK("graalos section missing in %s\n", name);
 		unmap_library(&temp_dso);
 		errno = EINVAL;
 		return 0;
 	}
+#endif
 
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
