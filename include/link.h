@@ -27,6 +27,7 @@ struct dl_phdr_info {
 	unsigned long long int dlpi_subs;
 	size_t dlpi_tls_modid;
 	void *dlpi_tls_data;
+	void *dlpi_graalos;
 };
 
 struct link_map {

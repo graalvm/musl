@@ -3293,6 +3293,8 @@ enum
 #define R_RISCV_SET32           56
 #define R_RISCV_32_PCREL        57
 
+#include "elf_graalos.h"
+
 #ifdef __cplusplus
 }
 #endif

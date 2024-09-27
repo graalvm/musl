@@ -119,6 +119,7 @@ struct dso {
 		size_t *got;
 	} *funcdescs;
 	size_t *got;
+	size_t *graalos;
 	char buf[];
 };
 
@@ -1049,6 +1050,10 @@ static void decode_dyn(struct dso *p)
 		p->ghashtab = laddr(p, *dyn);
 	if (search_vec(p->dynv, dyn, DT_VERSYM))
 		p->versym = laddr(p, *dyn);
+	if (search_vec(p->dynv, dyn, DT_GRAALOS)) {
+		p->graalos = laddr(p, *dyn);
+		DEBUG_DYLINK("graalos p=%s addr=%p\n", p->name, p->graalos);
+	}
 }
 
 static size_t count_syms(struct dso *p)
@@ -1265,6 +1270,16 @@ static struct dso *load_library(const char *name, struct dso *needed_by)
 	 * checked are chosen to catch both musl and glibc, and to avoid
 	 * false positives from interposition-hack libraries. */
 	decode_dyn(&temp_dso);
+
+#ifndef OUT_OF_SANDBOX
+	if (!temp_dso.graalos) {
+		DEBUG_DYLINK("graalos section missing in %s\n", name);
+		unmap_library(&temp_dso);
+		errno = EINVAL;
+		return 0;
+	}
+#endif
+
 	if (find_sym(&temp_dso, "__libc_start_main", 1).sym &&
 	    find_sym(&temp_dso, "stdin", 1).sym) {
 		unmap_library(&temp_dso);
@@ -2498,6 +2513,7 @@ int dl_iterate_phdr(int(*callback)(struct dl_phdr_info *info, size_t size, void 
 		info.dlpi_tls_modid = current->tls_id;
 		info.dlpi_tls_data = !current->tls_id ? 0 :
 			__tls_get_addr((tls_mod_off_t[]){current->tls_id,0});
+		info.dlpi_graalos   = current->graalos;
 
 		ret = (callback)(&info, sizeof (info), data);
 
