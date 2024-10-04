@@ -167,6 +167,8 @@ _Noreturn void __pthread_exit(void *result)
 
 	/* Wake any joiner. */
 	a_store(&self->detach_state, DT_EXITED);
+
+  __asm__ __volatile__("mov $0, %rsp\n\t"); // disable stack access
 	__wake(&self->detach_state, 1, 1);
 
 	for (;;) __syscall(SYS_exit, 0);

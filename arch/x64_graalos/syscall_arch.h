@@ -4,39 +4,55 @@
 
 #include "libc.h"
 
-static __inline long __syscall0(long n)
+static __inline  __attribute__((always_inline)) long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6)
 {
-        return libc.visorcall(n, 0, 0, 0, 0, 0, 0);
+    register long r8 __asm__("r8") = a4;
+    register long r9 __asm__("r9") = a5;
+    register long r13 __asm__("r13") = a6;
+    register long r12 __asm__("r11") = (long)libc.visorcall;
+
+    unsigned long ret;
+    __asm__ __volatile__("lea return_target%=(%%rip), %%r12\n\t" // load return address into r12
+                         "mov 0(%%r11), %%r10d\n\t"
+                         "add $0x05e1f00d, %%r10d\n\t"
+                         "jnz wrong_target%=\n\t"
+                         "jmp *%%r11\n\t"
+                         "wrong_target%=:\n\t"
+                         "int3\n\t"
+                         "return_target%=:\n\t"
+                         "endbr64\n\t": "=a"(ret) :
+                         "r"(r12), "D"(n), "S"(a1), "d"(a2), "c"(a3), "r"(r8), "r"(r9), "r"(r13) : "rbx", "r10", "r12", "flags", "memory");
+    return ret;
 }
 
-static __inline long __syscall1(long n, long a1)
+static __inline __attribute__((always_inline)) long __syscall0(long n)
 {
-        return libc.visorcall(n, a1, 0, 0, 0, 0, 0);
+    return __syscall6(n, 0, 0, 0, 0, 0, 0);
 }
 
-static __inline long __syscall2(long n, long a1, long a2)
+static __inline __attribute__((always_inline)) long __syscall1(long n, long a1)
 {
-        return libc.visorcall(n, a1, a2, 0, 0, 0, 0);
+    return __syscall6(n, a1, 0, 0, 0, 0, 0);
 }
 
-static __inline long __syscall3(long n, long a1, long a2, long a3)
+static __inline __attribute__((always_inline)) long __syscall2(long n, long a1, long a2)
 {
-        return libc.visorcall(n, a1, a2, a3, 0, 0, 0);
+    return __syscall6(n, a1, a2, 0, 0, 0, 0);
 }
 
-static __inline long __syscall4(long n, long a1, long a2, long a3, long a4)
+static __inline __attribute__((always_inline)) long __syscall3(long n, long a1, long a2, long a3)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, 0, 0);
+    return __syscall6(n, a1, a2, a3, 0, 0, 0);
 }
 
-static __inline long __syscall5(long n, long a1, long a2, long a3, long a4, long a5)
+static __inline __attribute__((always_inline)) long __syscall4(long n, long a1, long a2, long a3, long a4)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, a5, 0);
+    return __syscall6(n, a1, a2, a3, a4, 0, 0);
 }
 
-static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6)
+static __inline __attribute__((always_inline)) long __syscall5(long n, long a1, long a2, long a3, long a4, long a5)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, a5, a6);
+    return __syscall6(n, a1, a2, a3, a4, a5, 0);
 }
 
 // removed VDSO definitions
