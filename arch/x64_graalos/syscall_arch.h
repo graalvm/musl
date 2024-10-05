@@ -16,7 +16,7 @@
     "return_target%=:\n\t"                  \
     "endbr64\n\t"
 
-#define SYSCALL_CLOBBER_COMMON "r10", "r12", "r13", "r14", "memory"
+#define SYSCALL_CLOBBER_COMMON "r10", "r12", "r13", "memory"
 
 static __inline  __attribute__((always_inline)) long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6)
 {
