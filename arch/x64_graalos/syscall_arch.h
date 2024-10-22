@@ -4,39 +4,75 @@
 
 #include "libc.h"
 
-static __inline long __syscall0(long n)
+
+// load return address into r12
+#define SYSCALL_ASM_SEQ                     \
+    "lea return_target%=(%%rip), %%r12\n\t" \
+    "jmp __visorcall\n\t"                   \
+    "return_target%=:\n\t"                  \
+    "endbr64\n\t"
+
+#define SYSCALL_CLOBBER_COMMON "r10", "r11", "r12", "r13", "memory"
+
+static __inline __attribute__((always_inline)) long __syscall0(long n)
 {
-        return libc.visorcall(n, 0, 0, 0, 0, 0, 0);
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ : "=a"(ret) :
+                         "a"(n) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall1(long n, long a1)
+static __inline __attribute__((always_inline)) long __syscall1(long n, long a1)
 {
-        return libc.visorcall(n, a1, 0, 0, 0, 0, 0);
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ : "=a"(ret) :
+                         "a"(n), "D"(a1) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall2(long n, long a1, long a2)
+static __inline __attribute__((always_inline)) long __syscall2(long n, long a1, long a2)
 {
-        return libc.visorcall(n, a1, a2, 0, 0, 0, 0);
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret) :
+                         "a"(n), "D"(a1), "S"(a2) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall3(long n, long a1, long a2, long a3)
+static __inline __attribute__((always_inline)) long __syscall3(long n, long a1, long a2, long a3)
 {
-        return libc.visorcall(n, a1, a2, a3, 0, 0, 0);
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ : "=a"(ret) :
+                         "a"(n), "D"(a1), "S"(a2), "d"(a3) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall4(long n, long a1, long a2, long a3, long a4)
+static __inline __attribute__((always_inline)) long __syscall4(long n, long a1, long a2, long a3, long a4)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, 0, 0);
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret) :
+                         "a"(n), "D"(a1), "S"(a2), "d"(a3), "c"(a4) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall5(long n, long a1, long a2, long a3, long a4, long a5)
+static __inline __attribute__((always_inline)) long __syscall5(long n, long a1, long a2, long a3, long a4, long a5)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, a5, 0);
+    register long r8 __asm__("r8") = a5;
+
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret) :
+                         "a"(n), "D"(a1), "S"(a2), "d"(a3), "c"(a4), "r"(r8) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
-static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6)
+static __inline  __attribute__((always_inline)) long __syscall6(long n, long a1, long a2, long a3, long a4, long a5, long a6)
 {
-        return libc.visorcall(n, a1, a2, a3, a4, a5, a6);
+    register long r8 __asm__("r8") = a5;
+    register long r9 __asm__("r9") = a6;
+
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret) :
+                         "a"(n), "D"(a1), "S"(a2), "d"(a3), "c"(a4), "r"(r8), "r"(r9) : SYSCALL_CLOBBER_COMMON);
+    return ret;
 }
 
 // removed VDSO definitions

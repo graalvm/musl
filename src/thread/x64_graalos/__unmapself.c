@@ -2,8 +2,9 @@
 #include "pthread_impl.h"
 #include "syscall_internal.h"
 
-void __unmapself(void *base, size_t size)
+_Noreturn void __unmapself(void *base, size_t size)
 {
-    // this call terminates the calling thread and unmaps its stack (specified by <base,size>)
-    __syscall2(__VISORCALL_unmapself, base, size);
+    __syscall2(SYS_munmap, base, size);
+    __syscall1(SYS_exit, 0);
+    __asm__ __volatile__("int3");
 }
