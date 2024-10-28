@@ -16,7 +16,7 @@ static int             signal_thread_inited = 0;
 static int             signal_thread_started = 0;
 static sigset_t        signal_thread_waitset;
 
-static void* signal_handling_func(void*) {
+static void* signal_handling_func(void* arg) {
     sigset_t mask;
     sigfillset(&mask);
     sigprocmask(SIG_SETMASK, &mask, NULL); // block everything so this thread will not be signalled
