@@ -15,4 +15,6 @@ _Noreturn void __visorcall() {
     "wrong_target%=:\n\t"
     "int3\n\t"
     :: "r"(r11));
+
+    __builtin_unreachable();
 }
