@@ -21,4 +21,5 @@ void __unmapself(void *base, size_t size)
 	unmap_base = base;
 	unmap_size = size;
 	CRTJMP(do_unmap, stack);
+  __builtin_unreachable();
 }
