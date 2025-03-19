@@ -45,3 +45,7 @@ long syscall(long n, ...)
 
 	return __syscall_ret(__syscall(n,a,b,c,d,e,f));
 }
+
+void __attribute__ ((noinline)) syscall_unwrapped() {
+	__syscall_direct();
+}

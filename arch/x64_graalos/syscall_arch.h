@@ -75,6 +75,18 @@ static __inline  __attribute__((always_inline)) long __syscall6(long n, long a1,
     return ret;
 }
 
+static __inline long __syscall_direct()
+{
+    __asm__ __volatile__("mov %%r10, %%rcx"
+                       :
+                       :
+                       : "rcx");
+
+    unsigned long ret;
+    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret));
+    return ret;
+}
+
 // removed VDSO definitions
 #define GRAALOS
 
