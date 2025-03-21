@@ -9,6 +9,8 @@ void dump_syscall(long n, long a, long b, long c, long d, long e, long f);
 #define dump_syscall(n, a, b, c, d, e, f)
 #endif // DUMP_SYSCALLS
 
+#define SYSCALL_ASM_SEQ "syscall\n\t"
+
 static __inline long __syscall0(long n)
 {
 	dump_syscall(n, 0, 0, 0, 0, 0, 0);
@@ -74,11 +76,6 @@ static __inline long __syscall6(long n, long a1, long a2, long a3, long a4, long
 	__asm__ __volatile__ ("syscall" : "=a"(ret) : "a"(n), "D"(a1), "S"(a2),
 						  "d"(a3), "r"(r10), "r"(r8), "r"(r9) : "rcx", "r11", "memory");
 	return ret;
-}
-
-static __inline void __syscall_direct()
-{
-	__asm__ __volatile__ ("syscall");
 }
 
 #ifndef __SANDBOX_SWCFI__

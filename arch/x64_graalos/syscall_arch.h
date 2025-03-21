@@ -12,6 +12,7 @@
     "return_target%=:\n\t"                  \
     "endbr64\n\t"
 
+// if this is changed, update syscall_direct() accordingly
 #define SYSCALL_CLOBBER_COMMON "r10", "r11", "r12", "r13", "memory"
 
 static __inline __attribute__((always_inline)) long __syscall0(long n)
@@ -72,18 +73,6 @@ static __inline  __attribute__((always_inline)) long __syscall6(long n, long a1,
     unsigned long ret;
     __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret) :
                          "a"(n), "D"(a1), "S"(a2), "d"(a3), "c"(a4), "r"(r8), "r"(r9) : SYSCALL_CLOBBER_COMMON);
-    return ret;
-}
-
-static __inline long __syscall_direct()
-{
-    __asm__ __volatile__("mov %%r10, %%rcx"
-                       :
-                       :
-                       : "rcx");
-
-    unsigned long ret;
-    __asm__ __volatile__(SYSCALL_ASM_SEQ: "=a"(ret));
     return ret;
 }
 

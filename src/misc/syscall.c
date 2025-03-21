@@ -46,6 +46,25 @@ long syscall(long n, ...)
 	return __syscall_ret(__syscall(n,a,b,c,d,e,f));
 }
 
-void __attribute__ ((noinline)) syscall_unwrapped() {
-	__syscall_direct();
+/**
+* This function provides a semantically equivalent replacement for the syscall instruction on Linux. It expects the kernel syscall interface, using %rax for the syscall number, and %rdi, %rsi, %rdx, %r10, %r8 and %r9 for the arguments. The result will be stored in %rax directly.
+*
+* The main user of this function is Golang, which expects to be able to make direct syscalls.
+ */
+long __attribute__((naked)) syscall_direct() {
+	// Linux x86_64 ABI callee saved registers:
+	// %rbx, %rbp, %r12-r15
+	// on GraalOS: %r10-13 are clobbered (as defined in SYSCALL_CLOBBER_COMMON)
+	// on Linux: %rcx and %r11 are clobbered
+	// Thus, we only need to save %r12 and %r13
+	__asm__ __volatile__(
+		"pushq %%r12\n\t" \
+		"pushq %%r13\n\t" \
+		// this is required since the kernel interface uses %r10, and the C ABI uses %rcx for the 4th parameter
+		"mov %%r10, %%rcx\n\t" \
+		SYSCALL_ASM_SEQ \
+		"popq %%r13\n\t" \
+		"popq %%r12\n\t" \
+		"ret\n\t"::
+	);
 }
