@@ -1,5 +1,6 @@
 // Copyright (c) 2022-2023 Oracle and/or its affiliates. All rights reserved.
 #define _GNU_SOURCE
+#include <stdint.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <sched.h>
@@ -8,12 +9,18 @@
 #include "syscall_internal.h"
 #include "include/graalos/musl_thread.h"
 
-
 int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 {
+    // Align the stack pointer to 16 bytes
+    uint64_t * wstack = (uint64_t*)((uint64_t)stack & -16);
+    // Allocate a fake return address for alignment (the isolate cannot return
+    // here anyway). This entry is also required for correct alignment later.
+    wstack--;
+    wstack[0] = 0xDEAD1234DEAD1234;
+
     struct clone_params_t params;
     params.func = func;
-    params.stack = stack;
+    params.stack = wstack;
     //params.flags = flags;
     params.arg = arg;
 
