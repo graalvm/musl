@@ -9,6 +9,8 @@ void dump_syscall(long n, long a, long b, long c, long d, long e, long f);
 #define dump_syscall(n, a, b, c, d, e, f)
 #endif // DUMP_SYSCALLS
 
+#define SYSCALL_ASM_SEQ "syscall\n\t"
+
 static __inline long __syscall0(long n)
 {
 	dump_syscall(n, 0, 0, 0, 0, 0, 0);

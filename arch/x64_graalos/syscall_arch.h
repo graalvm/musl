@@ -12,6 +12,7 @@
     "return_target%=:\n\t"                  \
     "endbr64\n\t"
 
+// if this is changed, update syscall_direct() accordingly
 #define SYSCALL_CLOBBER_COMMON "r10", "r11", "r12", "r13", "memory"
 
 static __inline __attribute__((always_inline)) long __syscall0(long n)
