@@ -6,6 +6,7 @@
 #include <locale.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <signal.h>
 
 #include "musl_types.h"
 
@@ -34,6 +35,14 @@ struct clone_params_t {
     void *tls;
     pid_t *ptid;
     pid_t *ctid;
+};
+
+struct sigcall_res {
+    uint64_t  handler;
+    uint64_t  syscall_number;
+    uint64_t  syscall_result;
+    uint64_t  sigmask;
+    siginfo_t info;
 };
 
 #ifdef __cplusplus
