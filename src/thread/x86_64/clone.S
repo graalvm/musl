@@ -27,7 +27,6 @@ __clone:
     je 2f // success label, use local symbols to avoid the ASMParser to inject an ENDBR64 after it, making it binsweep reachable
     int3
 2:
-    lfence
 #endif
 	call *%r9
 	endbr64
