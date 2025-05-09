@@ -17,7 +17,6 @@
     " mov (%0), %%ecx ;" \
     " add $0x05E1F00D, %%ecx ;" \
     " jnz wrong_target%= ;" \
-    " lfence ;" \
     " jmp *%0 ;" \
     " wrong_target%=: ;" \
     " int3 ;" \

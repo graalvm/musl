@@ -9,7 +9,6 @@ __x86_return_thunk:
 	mov     (%r11),%ecx
 	add     $0x05e1f00d,%ecx
 	jne     trap
-	lfence
 	pop     %rcx
 	jmpq    *%r11
 trap:
