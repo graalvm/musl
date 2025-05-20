@@ -7,4 +7,6 @@ _Noreturn void __unmapself(void *base, size_t size)
     __syscall2(SYS_munmap, base, size);
     __syscall1(SYS_exit, 0);
     __asm__ __volatile__("int3");
+
+    __builtin_unreachable();
 }

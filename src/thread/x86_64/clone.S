@@ -24,10 +24,9 @@ __clone:
 #ifdef __SANDBOX_SWCFI__
 	mov (%r9),%ebx
     add $0x05e1f00d,%ebx
-    je success
+    je 2f // success label, use local symbols to avoid the ASMParser to inject an ENDBR64 after it, making it binsweep reachable
     int3
-success:
-    lfence
+2:
 #endif
 	call *%r9
 	endbr64

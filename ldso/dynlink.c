@@ -484,6 +484,13 @@ static void do_relocs(struct dso *dso, size_t *rel, size_t rel_size, size_t stri
 		case REL_RELATIVE:
 			*reloc_addr = (size_t)base + addend;
 			break;
+		case REL_IRELATIVE:
+            {
+                size_t target = (size_t)base + addend;
+                size_t (*func)() = (size_t (*)()) target;
+                *reloc_addr = func();
+            }
+			break;
 		case REL_SYM_OR_REL:
 			if (sym) *reloc_addr = sym_val + addend;
 			else *reloc_addr = (size_t)base + addend;
@@ -1038,12 +1045,10 @@ static void decode_dyn(struct dso *p)
 	if (dyn[0]&(1<<DT_HASH))
 		p->hashtab = laddr(p, dyn[DT_HASH]);
 	// The untrusted loader should ignore rpath
-	#ifndef GRAALOS
-		if (dyn[0]&(1<<DT_RPATH))
-			p->rpath_orig = p->strings + dyn[DT_RPATH];
-		if (dyn[0]&(1<<DT_RUNPATH))
-			p->rpath_orig = p->strings + dyn[DT_RUNPATH];
-	#endif
+    if (dyn[0]&(1<<DT_RPATH))
+        p->rpath_orig = p->strings + dyn[DT_RPATH];
+    if (dyn[0]&(1<<DT_RUNPATH))
+        p->rpath_orig = p->strings + dyn[DT_RUNPATH];
 	if (dyn[0]&(1<<DT_PLTGOT))
 		p->got = laddr(p, dyn[DT_PLTGOT]);
 	if (search_vec(p->dynv, dyn, DT_GNU_HASH))

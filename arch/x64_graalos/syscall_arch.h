@@ -3,15 +3,22 @@
 #define __SYSCALL_LL_O(x) (x)
 
 #include "libc.h"
+#include "syscall_internal.h"
 
+#define __SYSCALL_STRINGIFY0(toks) #toks
+#define __SYSCALL_STRINGIFY(toks) __SYSCALL_STRINGIFY0(toks)
 
 // load return address into r12
-#define SYSCALL_ASM_SEQ                     \
-    "lea return_target%=(%%rip), %%r12\n\t" \
-    "jmp __visorcall\n\t"                   \
-    "return_target%=:\n\t"                  \
-    "endbr64\n\t"
+#define SYSCALL_ASM_SEQ                               \
+    "endbr64\n\t" /* allow restarting */              \
+    "lea return_target%=(%%rip), %%r12\n\t"           \
+    "jmp __visorcall\n\t"                             \
+    "return_target%=:\n\t"                            \
+    "endbr64\n\t"                                     \
+    "cmp $-"__SYSCALL_STRINGIFY(ESIGNAL)", %%rax\n\t" \
+    "je __sig_handle\n\t"
 
+// if this is changed, update syscall_direct() accordingly
 #define SYSCALL_CLOBBER_COMMON "r10", "r11", "r12", "r13", "memory"
 
 static __inline __attribute__((always_inline)) long __syscall0(long n)

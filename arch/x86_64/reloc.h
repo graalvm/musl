@@ -5,6 +5,7 @@
 #define REL_GOT         R_X86_64_GLOB_DAT
 #define REL_PLT         R_X86_64_JUMP_SLOT
 #define REL_RELATIVE    R_X86_64_RELATIVE
+#define REL_IRELATIVE   R_X86_64_IRELATIVE
 #define REL_COPY        R_X86_64_COPY
 #define REL_DTPMOD      R_X86_64_DTPMOD64
 #define REL_DTPOFF      R_X86_64_DTPOFF64
@@ -17,7 +18,6 @@
     " mov (%0), %%ecx ;" \
     " add $0x05E1F00D, %%ecx ;" \
     " jnz wrong_target%= ;" \
-    " lfence ;" \
     " jmp *%0 ;" \
     " wrong_target%=: ;" \
     " int3 ;" \

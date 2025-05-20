@@ -23,7 +23,6 @@ longjmp:
     mov     (%r8),%ecx
     add     $0x05e1f00d,%ecx
     jne     trap
-    lfence
     jmpq    *%r8           /* goto saved address without altering rsp */
 trap:
     int3
