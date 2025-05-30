@@ -32,12 +32,21 @@ pid_t _Fork(void)
 	sigset_t set;
 	__block_all_sigs(&set);
 	LOCK(__abort_lock);
+#ifdef GRAALOS
+	extern int __graalos_fork(uint64_t flags); // defined in ./x64_graalos/vfork.S
+	ret = __graalos_fork(SIGCHLD);
+#else
 #ifdef SYS_fork
 	ret = __syscall(SYS_fork);
 #else
 	ret = __syscall(SYS_clone, SIGCHLD, 0);
 #endif
+#endif
 	__post_Fork(ret);
 	__restore_sigs(&set);
+#ifdef GRAALOS
+	return ret; // __graalos_fork already called __syscall_ret
+#else
 	return __syscall_ret(ret);
+#endif
 }
