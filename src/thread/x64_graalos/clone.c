@@ -21,7 +21,7 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
     struct clone_params_t params;
     params.func = func;
     params.stack = wstack;
-    //params.flags = flags;
+    params.flags = flags;
     params.arg = arg;
 
     va_list ap;

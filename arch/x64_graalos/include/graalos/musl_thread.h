@@ -28,8 +28,7 @@ namespace musl {
 
 struct clone_params_t {
     thread_fn_t func;
-    // int     flags;        -- removed because no user control of this is
-    // supported
+    uint64_t flags;
     void *arg;
     void *stack;
     void *tls;
