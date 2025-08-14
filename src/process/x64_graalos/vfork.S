@@ -120,7 +120,11 @@ __graalos_fork_child_return:
 	xor %eax, %eax
 
 	/* No need for __syscall_ret here. If we are in child, we know clone succeeded. */
+#ifdef __SANDBOX_SWCFI__
 	jmp __x86_return_thunk
+#else
+	ret
+#endif
 
 __graalos_fork_parent_return:
 	endbr64
