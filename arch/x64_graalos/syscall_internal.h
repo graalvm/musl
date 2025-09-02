@@ -6,10 +6,21 @@
 #define __VISORCALL_sigreturn ((1ul << 63) | (5ul))
 #define __VISORCALL_clock_gettime ((1ul << 63) | 6ul)
 #define __VISORCALL_fd_create ((1ul << 63) | (7ul))
-#define __VISORCALL_fd_xcall ((1ul << 63) | (8ul))
-#define __VISORCALL_fd_xread ((1ul << 63) | (9ul))
-#define __VISORCALL_fd_xwrite ((1ul << 63) | (10ul))
-#define __VISORCALL_fd_xverify ((1ul << 63) | (11ul))
+// Reserve error values from 0 to 0xfff
+#define __VISORCALL_fd_xcall5 ((1ul << 63) | (8ul))
+#define __VISORCALL_fd_xcall6 ((1ul << 63) | (9ul))
+#define __VISORCALL_fd_xread ((1ul << 63) | (10ul))
+#define __VISORCALL_fd_xwrite ((1ul << 63) | (11ul))
+#define __VISORCALL_fd_xverify ((1ul << 63) | (12ul))
+#define __VISORCALL_xcall_wait_return   ((1ul << 63) | (13ul))
+#define __VISORCALL_xcall6_setup         ((1ul << 63) | (14ul))
+
+// Special return/error values
+#define __XCALL_WAIT_EXIT_SUCCESS 0xffe
+
+// __VISORCALL_xcall_wait_return flags
+#define __XCALL_TO_WAIT 0x1
+#define __XCALL_TO_RET  0x2
 
 // Error values
 #define ERESTARTSYS 512
