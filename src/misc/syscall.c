@@ -68,3 +68,28 @@ long __attribute__((naked)) syscall_direct() {
 		"ret\n\t"::
 	);
 }
+
+// This call is not the same as syscall_direct.
+// syscall_direct replaces what would usually be a `syscall` instruction
+// with a function call to GraalOS visorcall.
+// It has to reconcile the difference between the syscall (Linux) ABI
+// and the GraalOS ABI.
+// In contrast, visorcall_direct replaces what would usually be a
+// function call to the visorcall function.
+// It has to reconcile the difference between a function call (System-V ABI on Linux)
+// and the GraalOS ABI.
+long __attribute__((naked)) visorcall_direct() {
+       __asm__ __volatile__(
+               // As per system-V ABI, functions (callee) preserves r12-r15
+               // GraalOS clobbers r10-r13 (as defined in SYSCALL_CLOBBER_COMMON)
+               // To preserve the ABI, we save r12 and r13.
+               "push %%r12;"
+               "push %%r13;"
+               SYSCALL_ASM_SEQ
+               "pop %%r13;"
+               "pop %%r12;"
+               "ret;"
+               :::
+       );
+}
+
