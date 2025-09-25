@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include "lock.h"
 #include "fork_impl.h"
+#include "syscall.h"
 
 #define malloc __libc_malloc
 #define calloc __libc_calloc
@@ -128,8 +129,9 @@ sem_t *sem_open(const char *name, int flags, ...)
 			goto fail;
 		}
 		close(fd);
-		e = link(tmp, name) ? errno : 0;
-		unlink(tmp);
+		// GraalOS-specific change: avoid link/unlink
+#define RENAME_NOREPLACE (1 << 0)
+		e = syscall(SYS_renameat2, AT_FDCWD, tmp, AT_FDCWD, name, RENAME_NOREPLACE) ? errno : 0;
 		if (!e) break;
 		munmap(map, sizeof(sem_t));
 		/* Failure is only fatal when doing an exclusive open;
