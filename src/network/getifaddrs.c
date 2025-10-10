@@ -209,6 +209,8 @@ int getifaddrs(struct ifaddrs **ifap)
 	struct ifaddrs_ctx _ctx, *ctx = &_ctx;
 	int r;
 	memset(ctx, 0, sizeof *ctx);
+	// GraalOS change: some code (e.g., psutils) expects the out param to be set to NULL on error
+	*ifap = NULL;
 	r = __rtnetlink_enumerate(AF_UNSPEC, AF_UNSPEC, netlink_msg_to_ifaddr, ctx);
 	if (r == 0) *ifap = ctx->first;
 	else freeifaddrs(ctx->first);
