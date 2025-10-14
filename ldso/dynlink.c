@@ -2154,8 +2154,9 @@ void __dls3(size_t *sp, size_t *auxv)
 		libc.tls_size = tmp_tls_size;
 	}
 
-	if (ldso_fail) _exit(127);
+	// GraalOS: if in ldd mode - behave like gnu ldd and exit with RC 0
 	if (ldd_mode) _exit(0);
+	if (ldso_fail) _exit(127);
 
 	/* Determine if malloc was interposed by a replacement implementation
 	 * so that calloc and the memalign family can harden against the
