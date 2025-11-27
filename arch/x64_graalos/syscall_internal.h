@@ -15,6 +15,8 @@
 #define __VISORCALL_xcall_wait_return   ((1ul << 63) | (13ul))
 #define __VISORCALL_xcall6_setup         ((1ul << 63) | (14ul))
 
+#define __VISORCALL_hostiso_callback ((1ul << 63) | (15ul))
+
 // Special return/error values
 #define __XCALL_WAIT_EXIT_SUCCESS 0xffe
 
