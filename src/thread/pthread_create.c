@@ -169,8 +169,15 @@ _Noreturn void __pthread_exit(void *result)
 	a_store(&self->detach_state, DT_EXITED);
 
 	__wake(&self->detach_state, 1, 1);
-  __asm__ __volatile__("mov $0, %rsp\n\t"); // disable stack access
-
+#if defined(__x86_64__)
+	// GraalOS x86_64
+    __asm__ __volatile__("mov $0, %rsp\n\t"); // disable stack access
+#elif defined(__aarch64__)
+	// GraalOS aarch64: disable stack access before SYS_exit on __pthread_exit
+	// mov sp, #0 and mov sp, xzr are both illegal. use a variable.
+    register unsigned long z = 0;
+	__asm__ __volatile__("mov sp, %0" :: "r"(z) : "memory");
+#endif
 	for (;;) __syscall(SYS_exit, 0);
 }
 

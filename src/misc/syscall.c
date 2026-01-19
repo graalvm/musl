@@ -7,6 +7,8 @@
 
 #undef syscall
 
+#if defined(__x86_64__)
+// GraalOS x86_64
 #define VISORCALL_mmap_fixed_offset          ((1ul << 63) | (10ul))
 
 #ifdef DUMP_SYSCALLS
@@ -93,3 +95,20 @@ long __attribute__((naked)) visorcall_direct() {
        );
 }
 
+#elif defined(__aarch64__)
+// aarch64: TODO visorcall_direct, syscall_direct
+long syscall(long n, ...)
+{
+	va_list ap;
+	syscall_arg_t a,b,c,d,e,f;
+	va_start(ap, n);
+	a=va_arg(ap, syscall_arg_t);
+	b=va_arg(ap, syscall_arg_t);
+	c=va_arg(ap, syscall_arg_t);
+	d=va_arg(ap, syscall_arg_t);
+	e=va_arg(ap, syscall_arg_t);
+	f=va_arg(ap, syscall_arg_t);
+	va_end(ap);
+	return __syscall_ret(__syscall(n,a,b,c,d,e,f));
+}
+#endif

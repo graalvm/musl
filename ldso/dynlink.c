@@ -484,6 +484,8 @@ static void do_relocs(struct dso *dso, size_t *rel, size_t rel_size, size_t stri
 		case REL_RELATIVE:
 			*reloc_addr = (size_t)base + addend;
 			break;
+#if defined(__x86_64__)
+        // GraalOS x86_64
 		case REL_IRELATIVE:
             {
                 size_t target = (size_t)base + addend;
@@ -491,6 +493,7 @@ static void do_relocs(struct dso *dso, size_t *rel, size_t rel_size, size_t stri
                 *reloc_addr = func();
             }
 			break;
+#endif
 		case REL_SYM_OR_REL:
 			if (sym) *reloc_addr = sym_val + addend;
 			else *reloc_addr = (size_t)base + addend;
