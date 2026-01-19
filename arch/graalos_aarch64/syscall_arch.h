@@ -38,7 +38,8 @@
 // x17 fpsr
 // x16 fpcr
 // x14 visor_dispatch
-#define SYSCALL_CLOBBER_COMMON "x19", "x21", "x22", "x23", "cc", "memory", "x9", "x10", "x11", "x12", "x14", "x16", "x17"
+// x13/x15 for sig_handle restoring
+#define SYSCALL_CLOBBER_COMMON "x19", "x21", "x22", "x23", "cc", "memory", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17"
 #define __asm_syscall(...) do { \
 __asm__ __volatile__ ( SYSCALL_ASM_SEQ \
 : "=r"(x0) : __VA_ARGS__ : SYSCALL_CLOBBER_COMMON); \
