@@ -34,3 +34,7 @@
 // GraalOS descriptor create flags
 #define GFD_CLOEXEC     0x80000
 #define GFD_NONBLOCK    0x800
+
+// XCall-specific GraalOS descriptor flags
+#define GFD_AVX512_HI16_CALL 0x10000
+#define GFD_AVX512_HI16_RET  0x20000
