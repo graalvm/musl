@@ -96,7 +96,8 @@ long __attribute__((naked)) visorcall_direct() {
 }
 
 #elif defined(__aarch64__)
-// aarch64: TODO visorcall_direct, syscall_direct
+// aarch64 TODO [GRAALOS-6927]: syscall_direct for Golang
+// aarch64 TODO [GRAALOS-6317]: visorcall_direct for cross iso calls 
 long syscall(long n, ...)
 {
 	va_list ap;
