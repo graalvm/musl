@@ -37,8 +37,8 @@ __sig_handle:
 	je done
 
 	// call sigreturn
-	mov %rdx, %rdi // sigmask => first sigreturn argument
-	mov %rax, %rsi // desired rax => second sigreturn argument
+	mov %rax, %rdi // desired rax => first sigreturn argument
+	mov %rdx, %rsi // sigmask => second sigreturn argument
 	mov $0x8000000000000005, %rax // __VISORCALL_sigreturn
 	lea sigreturn_return_target(%rip), %r12
 	jmp __visorcall
