@@ -2,7 +2,9 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/resource.h>
 #include <unistd.h>
+#include "pthread_impl.h"
 #include "syscall.h"
 #include "atomic.h"
 #include "libc.h"
@@ -16,6 +18,28 @@ static void dummy1(void *p) {}
 weak_alias(dummy1, __init_ssp);
 
 #define AUX_CNT 38
+
+#ifdef GRAALOS
+/* Seed the stack bounds here from the virtual stack limit and the auxv location so
+ * pthread_getattr_np can use the normal fast path instead of the Linux-specific
+ * probing fallback. */
+static void init_main_thread_stack(void)
+{
+	struct rlimit stack_limit;
+	uintptr_t stack_top;
+	pthread_t self;
+
+	if (__syscall(SYS_prlimit64, 0, RLIMIT_STACK, 0, &stack_limit) < 0) return;
+	if (stack_limit.rlim_cur == SYSCALL_RLIM_INFINITY || !stack_limit.rlim_cur) return;
+
+	stack_top = (uintptr_t)libc.auxv;
+	stack_top += -(uintptr_t)stack_top & (libc.page_size-1);
+
+	self = __pthread_self();
+	self->stack = (void *)stack_top;
+	self->stack_size = stack_limit.rlim_cur;
+}
+#endif
 
 #ifdef __GNUC__
 __attribute__((__noinline__))
@@ -37,6 +61,9 @@ void __init_libc(char **envp, char *pn)
 	for (i=0; pn[i]; i++) if (pn[i]=='/') __progname = pn+i+1;
 
 	__init_tls(aux);
+#ifdef GRAALOS
+	init_main_thread_stack();
+#endif
 	__init_ssp((void *)aux[AT_RANDOM]);
 
 	if (aux[AT_UID]==aux[AT_EUID] && aux[AT_GID]==aux[AT_EGID]

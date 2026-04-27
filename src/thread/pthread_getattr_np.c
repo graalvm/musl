@@ -12,6 +12,12 @@ int pthread_getattr_np(pthread_t t, pthread_attr_t *a)
 		a->_a_stackaddr = (uintptr_t)t->stack;
 		a->_a_stacksize = t->stack_size;
 	} else {
+#ifdef GRAALOS
+		static const char msg[] =
+			"musl: unexpected missing main thread stack metadata in pthread_getattr_np\n";
+		__syscall(SYS_write, 2, msg, sizeof(msg)-1);
+		a_crash();
+#else
 		char *p = (void *)libc.auxv;
 		size_t l = PAGE_SIZE;
 		p += -(uintptr_t)p & PAGE_SIZE-1;
@@ -19,6 +25,7 @@ int pthread_getattr_np(pthread_t t, pthread_attr_t *a)
 		while (mremap(p-l-PAGE_SIZE, PAGE_SIZE, 2*PAGE_SIZE, 0)==MAP_FAILED && errno==ENOMEM)
 			l += PAGE_SIZE;
 		a->_a_stacksize = l;
+#endif
 	}
 	return 0;
 }
