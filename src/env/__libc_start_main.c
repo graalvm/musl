@@ -2,7 +2,10 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <string.h>
+#include <sys/resource.h>
 #include <unistd.h>
+#include "pthread_impl.h"
 #include "syscall.h"
 #include "atomic.h"
 #include "libc.h"
@@ -16,6 +19,43 @@ static void dummy1(void *p) {}
 weak_alias(dummy1, __init_ssp);
 
 #define AUX_CNT 38
+
+#ifdef GRAALOS
+static char **main_argv;
+
+/* Seed the stack bounds here from the virtual stack limit and initial stack data so
+ * pthread_getattr_np can use the normal fast path instead of the Linux-specific
+ * probing fallback. */
+static void init_main_thread_stack(char **envp)
+{
+	struct rlimit stack_limit;
+	char **p;
+	char *highest_string = 0;
+	uintptr_t stack_top;
+	pthread_t self;
+
+	if (__syscall(SYS_prlimit64, 0, RLIMIT_STACK, 0, &stack_limit) < 0) return;
+	if (stack_limit.rlim_cur == SYSCALL_RLIM_INFINITY || !stack_limit.rlim_cur) return;
+
+	for (p = main_argv; p && *p; p++) {
+		if ((uintptr_t)*p > (uintptr_t)highest_string)
+			highest_string = *p;
+	}
+	for (p = envp; p && *p; p++) {
+		if ((uintptr_t)*p > (uintptr_t)highest_string)
+			highest_string = *p;
+	}
+
+	stack_top = (uintptr_t)libc.auxv;
+	if ((uintptr_t)highest_string > stack_top)
+		stack_top = (uintptr_t)highest_string + strlen(highest_string) + 1;
+	stack_top += -(uintptr_t)stack_top & (libc.page_size-1);
+
+	self = __pthread_self();
+	self->stack = (void *)stack_top;
+	self->stack_size = stack_limit.rlim_cur;
+}
+#endif
 
 #ifdef __GNUC__
 __attribute__((__noinline__))
@@ -37,6 +77,9 @@ void __init_libc(char **envp, char *pn)
 	for (i=0; pn[i]; i++) if (pn[i]=='/') __progname = pn+i+1;
 
 	__init_tls(aux);
+#ifdef GRAALOS
+	init_main_thread_stack(envp);
+#endif
 	__init_ssp((void *)aux[AT_RANDOM]);
 
 	if (aux[AT_UID]==aux[AT_EUID] && aux[AT_GID]==aux[AT_EGID]
@@ -73,6 +116,10 @@ int __libc_start_main(int (*main)(int,char **,char **), int argc, char **argv,
 	void (*init_dummy)(), void(*fini_dummy)(), void(*ldso_dummy)())
 {
 	char **envp = argv+argc+1;
+
+#ifdef GRAALOS
+	main_argv = argv;
+#endif
 
 	/* External linkage, and explicit noinline attribute if available,
 	 * are used to prevent the stack frame used during init from
