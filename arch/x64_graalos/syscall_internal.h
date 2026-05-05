@@ -15,6 +15,13 @@
 #define __VISORCALL_xcall_wait_return   ((1ul << 63) | (13ul))
 #define __VISORCALL_xcall6_setup         ((1ul << 63) | (14ul))
 
+#define __VISORCALL_profiler_scope ((1ul << 63) | (17ul))
+
+// The following constants are the valid arg0 op values
+// for the __VISORCALL_profiler_scope visorcall.
+#define __VISORCALL_profiler_scope_op_push 0ul
+#define __VISORCALL_profiler_scope_op_pop 1ul
+
 // Special return/error values
 #define __XCALL_WAIT_EXIT_SUCCESS 0xffe
 
