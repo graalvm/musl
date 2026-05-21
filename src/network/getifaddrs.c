@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <ifaddrs.h>
 #include <syscall.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include "netlink.h"
@@ -204,6 +206,106 @@ static int netlink_msg_to_ifaddr(void *pctx, struct nlmsghdr *h)
 	return 0;
 }
 
+#ifdef GRAALOS
+static int graalos_ifaddrs_append_ipv4(struct ifaddrs_ctx *ctx, const struct ifreq *conf_req, int fd)
+{
+	struct ifaddrs_storage *ifs;
+	struct ifreq req;
+
+	if (conf_req->ifr_addr.sa_family != AF_INET) return 0;
+
+	ifs = calloc(1, sizeof *ifs);
+	if (!ifs) return -1;
+
+	ifs->ifa.ifa_addr = &ifs->addr.sa;
+	ifs->addr.v4 = *(const struct sockaddr_in *)&conf_req->ifr_addr;
+
+	strncpy(ifs->name, conf_req->ifr_name, IFNAMSIZ);
+	ifs->name[IFNAMSIZ] = 0;
+	ifs->ifa.ifa_name = ifs->name;
+
+	memset(&req, 0, sizeof req);
+	strncpy(req.ifr_name, conf_req->ifr_name, IFNAMSIZ);
+	if (ioctl(fd, SIOCGIFFLAGS, &req) < 0) {
+		free(ifs);
+		return -1;
+	}
+	ifs->ifa.ifa_flags = req.ifr_flags;
+
+	memset(&req, 0, sizeof req);
+	strncpy(req.ifr_name, conf_req->ifr_name, IFNAMSIZ);
+	if (ioctl(fd, SIOCGIFNETMASK, &req) < 0) {
+		free(ifs);
+		return -1;
+	}
+	if (req.ifr_netmask.sa_family == AF_INET) {
+		ifs->netmask.v4 = *(struct sockaddr_in *)&req.ifr_netmask;
+		ifs->ifa.ifa_netmask = &ifs->netmask.sa;
+	}
+
+	if (ifs->ifa.ifa_flags & IFF_BROADCAST) {
+		memset(&req, 0, sizeof req);
+		strncpy(req.ifr_name, conf_req->ifr_name, IFNAMSIZ);
+		if (ioctl(fd, SIOCGIFBRDADDR, &req) == 0 &&
+		    req.ifr_broadaddr.sa_family == AF_INET) {
+			ifs->ifu.v4 = *(struct sockaddr_in *)&req.ifr_broadaddr;
+			ifs->ifa.ifa_broadaddr = &ifs->ifu.sa;
+		}
+	}
+
+	if (!ctx->first) ctx->first = &ifs->ifa;
+	if (ctx->last) ctx->last->ifa_next = &ifs->ifa;
+	ctx->last = &ifs->ifa;
+	return 0;
+}
+
+static int graalos_getifaddrs_ioctl(struct ifaddrs_ctx *ctx)
+{
+	struct ifconf ifc;
+	struct ifreq *reqs = 0;
+	int fd, count, r = -1;
+
+	fd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (fd < 0) return -1;
+
+	memset(&ifc, 0, sizeof ifc);
+	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) goto out;
+	if (ifc.ifc_len <= 0) {
+		r = 0;
+		goto out;
+	}
+
+	reqs = calloc(1, ifc.ifc_len);
+	if (!reqs) {
+		errno = ENOMEM;
+		goto out;
+	}
+
+	ifc.ifc_req = reqs;
+	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) goto out;
+
+	count = ifc.ifc_len / sizeof *reqs;
+	for (int i = 0; i < count; i++) {
+		if (graalos_ifaddrs_append_ipv4(ctx, &reqs[i], fd) < 0) goto out;
+	}
+	r = 0;
+
+out:
+	if (r < 0) {
+		int e = errno;
+		freeifaddrs(ctx->first);
+		ctx->first = ctx->last = 0;
+		free(reqs);
+		close(fd);
+		errno = e;
+		return r;
+	}
+	free(reqs);
+	close(fd);
+	return r;
+}
+#endif
+
 int getifaddrs(struct ifaddrs **ifap)
 {
 	struct ifaddrs_ctx _ctx, *ctx = &_ctx;
@@ -212,6 +314,13 @@ int getifaddrs(struct ifaddrs **ifap)
 	// GraalOS change: some code (e.g., psutils) expects the out param to be set to NULL on error
 	*ifap = NULL;
 	r = __rtnetlink_enumerate(AF_UNSPEC, AF_UNSPEC, netlink_msg_to_ifaddr, ctx);
+#ifdef GRAALOS
+	if (r < 0 && errno == EAFNOSUPPORT) {
+		freeifaddrs(ctx->first);
+		memset(ctx, 0, sizeof *ctx);
+		r = graalos_getifaddrs_ioctl(ctx);
+	}
+#endif
 	if (r == 0) *ifap = ctx->first;
 	else freeifaddrs(ctx->first);
 	return r;
