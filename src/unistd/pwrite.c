@@ -12,7 +12,9 @@ ssize_t pwrite(int fd, const void *buf, size_t size, off_t ofs)
 		1, (long)(ofs), (long)(ofs>>32), RWF_NOAPPEND);
 	if (r != -EOPNOTSUPP && r != -ENOSYS)
 		return __syscall_ret(r);
-	if (fcntl(fd, F_GETFL) & O_APPEND)
-		return __syscall_ret(-EOPNOTSUPP);
+
+	// GraalOS change: prefer compatibility with older Linux versions and glibc over "technically correct" behavior.
+	// if (fcntl(fd, F_GETFL) & O_APPEND)
+	// 	return __syscall_ret(-EOPNOTSUPP);
 	return syscall_cp(SYS_pwrite, fd, buf, size, __SYSCALL_LL_PRW(ofs));
 }
