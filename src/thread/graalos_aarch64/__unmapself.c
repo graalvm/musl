@@ -13,7 +13,8 @@ _Noreturn void __unmapself(void *base, size_t size)
 {
 	// use __syscall here to avoid direct syscalls via svc
     __syscall2(SYS_munmap, base, size);
-    __syscall1(SYS_exit, 0);
+    while (__syscall1(SYS_exit, 0) == -ERESTARTSYS) {
+    }
     __asm__ __volatile__("brk #0x0");
 
     __builtin_unreachable();
