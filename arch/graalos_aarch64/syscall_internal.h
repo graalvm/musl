@@ -28,6 +28,7 @@
 // __VISORCALL_xcall_wait_return flags
 #define __XCALL_TO_WAIT 0x1
 #define __XCALL_TO_RET  0x2
+#define __XCALL_TO_WAIT_MIGRATING 0x4
 
 // Error values
 #define ERESTARTSYS 512
