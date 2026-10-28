@@ -16,19 +16,23 @@
 #define __VISORCALL_xcall6_setup         ((1ul << 63) | (14ul))
 
 #define __VISORCALL_profiler_scope ((1ul << 63) | (17ul))
+#define __VISORCALL_snapshot ((1ul << 63) | (18ul))
 
-// The following constants are the valid arg0 op values
-// for the __VISORCALL_profiler_scope visorcall.
-#define __VISORCALL_profiler_scope_op_push 0ul
-#define __VISORCALL_profiler_scope_op_pop 1ul
-
-// Special return/error values
-#define __XCALL_WAIT_EXIT_SUCCESS 0xffe
-
-// __VISORCALL_xcall_wait_return flags
+// Valid arg0 values for __VISORCALL_xcall_wait_return.
 #define __XCALL_TO_WAIT 0x1
 #define __XCALL_TO_RET  0x2
 #define __XCALL_TO_WAIT_MIGRATING 0x4
+
+// Valid arg0 values for __VISORCALL_profiler_scope.
+#define __VISORCALL_profiler_scope_op_push 0ul
+#define __VISORCALL_profiler_scope_op_pop 1ul
+
+// Valid arg0 values for __VISORCALL_snapshot.
+#define __VISORCALL_snapshot_stop     0ul
+#define __VISORCALL_snapshot_continue 1ul
+
+// Special return/error values
+#define __XCALL_WAIT_EXIT_SUCCESS 0xffe
 
 // Error values
 #define ERESTARTSYS 512
